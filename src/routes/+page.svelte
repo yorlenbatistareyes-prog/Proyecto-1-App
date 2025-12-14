@@ -33,21 +33,31 @@ let menuAbierto = false;
 </script>
 
 <header class="header">
-  <button
-    class="menu-toggle"
-    on:click={() => menuAbierto = !menuAbierto}
-  >
-    ☰
-  </button>
 
-  <img src="/icons/maleta.png" alt="Logo" class="logo" />
+  <!-- PARTE BLANCA -->
+  <div class="header-top">
 
-  <div class="header-text">
-    <h1>Asistente de Visitas</h1>
-    <p class="description">
-      Organiza y controla todas tus visitas
-    </p>
+    <button
+      class="menu-toggle"
+      on:click={() => menuAbierto = !menuAbierto}
+    >
+      ☰
+    </button>
+
+    <div class="header-logo">
+      <div class="logo-text">AV</div>
+    </div>
+
+    <div class="header-info">
+      <h1>Asistente de Visitas</h1>
+      <p>Organiza y controla todas tus visitas</p>
+    </div>
+
   </div>
+
+  <!-- FRANJA GRIS -->
+  <div class="header-bottom"></div>
+
 </header>
 
 <main>
@@ -140,67 +150,129 @@ let menuAbierto = false;
 </aside>
 
 <style>
+/* =========================
+   ESTILOS GENERALES
+   ========================= */
+
 main {
   padding-bottom: 60px;
 }
 
 header {
-  background: #ede7f6;
-  padding: 12px;
-  border-bottom: 1px solid #d1c4e9;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-header h1 {
-  color: #6b5fb5;
+button {
+  cursor: pointer;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+header.header {
+  position: relative;
+  width: 100vw;              /* ← pantalla completa REAL */
+  margin-left: calc(50% - 50vw); /* ← rompe el contenedor */
+  margin-right: calc(50% - 50vw);
+  height: 120px;
+}
+/* FRANJA SUPERIOR BLANCA */
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 12px 88px; /* espacio para el bloque rojo */
+  background: #ffffff;
+  height: 72px;                /* ⬅️ ALTURA FIJA */
+  box-sizing: border-box;
+}
+/* TEXTO */
+ .header-top {
+  display: flex;
+  align-items: flex-start; /* 👈 CLAVE */
+  gap: 14px;
+  padding: 12px 16px;
+  background: #fff;
+}
+.header-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: 88px; /* ⬅️ espacio reservado para el logo */
+}
+.header-info h1 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
 }
 
-.description {
-    margin: 12px 0 16px;
-    color: #555;
-    font-size: 0.95rem;
-  }
+.header-info p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+/* FRANJA INFERIOR GRIS */
+.header-bottom {
+  height: 48px;
+  background: #3f3f3f;
+  margin-top: 0;           /* ⬅️ asegúrate */
+  position: relative;
+  z-index: 1;
+}
+/* =========================
+   CUADRO ROJO (LOGO)
+   ========================= */
 
-  .acciones {
-  margin-top: 16px;
-  margin-bottom: 16px;
+.header-logo {
+  position: absolute;
+  left: 0;
+  top: 0;
+
+  width: 90px;
+  height: 96px;           /* ⬅️ baja dentro de la franja gris */
+
+  background: #b63a3a;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 10;
+}
+/* LOGO INTERNO */
+.logo-text {
+  color: white;
+  font-weight: 400;        /* ⬅️ más grueso (clave) */
+  font-size: 46px;         /* puedes subir/bajar 1–2px si quieres */
+  letter-spacing: 0.6px;  /* ⬅️ hace el AV más “ancho” visualmente */
+  line-height: 1.15;
+}
+/* =========================
+   ACCIONES
+   ========================= */
+
+.acciones {
+  margin: 16px 0;
   display: flex;
   gap: 8px;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: #eee9f7;
-  border-bottom: 1px solid #d6cfee;
+.acciones button {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #cfc6f3;
+  background: white;
 }
 
-.logo {
-  height: 48px;
-  width: 48px;
-  object-fit: contain;
-
-  padding: 8px;
-  border-radius: 12px;
-
-  background: #f1ecfb;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-
-  filter: brightness(1.1) contrast(1.1);
-}
-.header-text h1 {
-  margin: 0;
-  font-size: 1.2rem;
+.acciones button.activo {
+  background: #ede9fb;
+  border-color: #8b7fd6;
+  font-weight: 600;
 }
 
-.header-text .description {
-  margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
+/* =========================
+   BARRA INFERIOR
+   ========================= */
+
 .barra-inferior {
   display: flex;
   position: fixed;
@@ -208,7 +280,7 @@ header h1 {
   left: 0;
   right: 0;
   padding: 6px 0;
-  background: #ede7f6;      /* 👈 nuevo color */
+  background: #ede7f6;
   border-top: 1px solid #d1c4e9;
 }
 
@@ -216,15 +288,13 @@ header h1 {
   flex: 1;
   background: none;
   border: none;
-  padding: 6px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  cursor: pointer;
 }
 
-.barra-inferior img { 
+.barra-inferior img {
   width: 24px;
   height: 24px;
   filter: grayscale(100%);
@@ -235,67 +305,10 @@ header h1 {
   font-size: 12px;
   color: #666;
 }
-button {
-  margin-right: 8px;
-}
 
-.activo {
-  background-color: #cce5ff;
-  border: 2px solid #004085;
-  font-weight: bold;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.barra-inferior button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-
-.barra-inferior .icono {
-  width: 24px;
-  height: 24px;
-}
-
-.barra-inferior .texto {
-  font-size: 0.7rem;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-.logo {
-  height: 40px;
-  width: 40px;
-  object-fit: contain;
-  border-radius: 6px;
-}
-
-.acciones button {
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #cfc6f3;
-  background: white;
-  cursor: pointer;
-}
-
-.acciones button.activo {
-  background: #ede9fb;
-  border-color: #8b7fd6;
-  font-weight: 600;
-}
+/* =========================
+   SIDEBAR
+   ========================= */
 
 .sidebar {
   position: fixed;
@@ -305,27 +318,8 @@ button:disabled {
   height: 100vh;
   background: #e6e6e6;
   z-index: 10;
-}
-
-.sidebar h2 {
-  margin-top: 0;
-  font-size: 1rem;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0 0;
-}
-
-.sidebar li {
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.sidebar li:hover {
-  background: #e6e0fa;
+  padding: 1rem;
+  transition: transform 0.25s ease;
 }
 
 .sidebar.cerrado {
@@ -336,21 +330,15 @@ button:disabled {
   transform: translateX(0);
 }
 
-.sidebar {
-  transition: transform 0.25s ease;
-}
-
 .menu-toggle {
   position: fixed;
-  top: 12px;
+  top: 2px;        /* ⬅️ antes estaba más abajo */
   left: 12px;
   z-index: 20;
-  background: transparent;
+  background: none;
   border: none;
   font-size: 22px;
-  cursor: pointer;
 }
-
 </style>
 
 
