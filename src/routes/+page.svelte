@@ -36,23 +36,20 @@ let menuAbierto = false;
 
   <!-- PARTE BLANCA -->
   <div class="header-top">
-
-    <button
-      class="menu-toggle"
-      on:click={() => menuAbierto = !menuAbierto}
-    >
+    <button class="menu-toggle" on:click={() => menuAbierto = !menuAbierto}>
       ☰
     </button>
-
     <div class="header-logo">
       <div class="logo-text">AV</div>
     </div>
-
     <div class="header-info">
       <h1>Asistente de Visitas</h1>
-      <p>Organiza y controla todas tus visitas</p>
+      <p>Documenta todas tus visitas</p>
     </div>
-
+    <!-- Botón de Configuración ajustado -->
+    <button class="config-button" on:click={() => seccion = 'configuracion'}>
+      <img class="icono" src="/icons/configuracion.svg" alt="Configuración" />
+    </button>
   </div>
 
   <!-- FRANJA GRIS -->
@@ -67,7 +64,7 @@ let menuAbierto = false;
     class:activo={seccion === 'registros'}
     on:click={verRegistros}
   >
-    Registros recientes
+    Visitas recientes
   </button>
 
   <button
@@ -79,7 +76,7 @@ let menuAbierto = false;
 </div>
 
   {#if seccion === 'registros'}
-  <Panel titulo="Registros recientes">
+  <Panel titulo="Visitas recientes">
     <ul>
       {#each visitasRecientes as visita}
         <li>
@@ -133,10 +130,6 @@ let menuAbierto = false;
     <span class="texto">Registros</span>
   </button>
 
-  <button>
-    <img class="icono" src="/icons/configuracion.svg" alt="Configuración" />
-    <span class="texto">Configuración</span>
-  </button>
 </nav>
 
 <aside class="sidebar {menuAbierto ? 'abierto' : 'cerrado'}">
@@ -150,14 +143,18 @@ let menuAbierto = false;
 </aside>
 
 <style>
+  /* =========================
+   FUENTE GLOBAL
+   ========================= */
+:global(body) {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
 /* =========================
    ESTILOS GENERALES
    ========================= */
-
 main {
   padding-bottom: 60px;
 }
-
 header {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
 }
@@ -165,11 +162,9 @@ header {
 button {
   cursor: pointer;
 }
-
 /* =========================
    HEADER
    ========================= */
-
 header.header {
   position: relative;
   width: 100vw;              /* ← pantalla completa REAL */
@@ -198,7 +193,7 @@ header.header {
 .header-info {
   display: flex;
   flex-direction: column;
-  margin-left: 88px; /* ⬅️ espacio reservado para el logo */
+  margin-left: 110px; /* Ajustar el margen para que el título quede a la derecha del logo */
 }
 .header-info h1 {
   margin: 0;
@@ -331,14 +326,30 @@ header.header {
 }
 
 .menu-toggle {
-  position: fixed;
-  top: 2px;        /* ⬅️ antes estaba más abajo */
-  left: 12px;
+  position: absolute;
+  top: 14px;
+  left: 90px;   /* ⬅️ CLAVE: se sale del logo */
   z-index: 20;
   background: none;
   border: none;
   font-size: 22px;
 }
+
+.icono {
+  width: 34px; /* Tamaño estándar para el ícono */
+  height: 34px;
+  filter: grayscale(100%); /* Si quieres el efecto de escala de grises */
+  opacity: 0.7; /* Ajuste de opacidad */
+}
+.config-button {
+  background: none;
+  border: none;
+  position: absolute;
+  right: 16px; /* Mantener el margen desde el borde */
+  top: 30%; /* Centrado vertical en la franja blanca */
+  transform: translateY(-50%);/* Asegura el centrado vertical */
+}
+
 </style>
 
 
