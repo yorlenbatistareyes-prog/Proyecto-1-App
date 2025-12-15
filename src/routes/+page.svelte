@@ -114,6 +114,79 @@
   ====================== */
   let menuAbierto = false;
 
+   let mostrarFormularioCongregacion = false;
+
+  // estado del formulario
+  let circuitoSeleccionado = '';
+  let seccionCircuito = '';
+
+  function cancelarFormulario() {
+  mostrarFormularioCongregacion = false;
+}
+
+function guardarCongregacion() {
+  const congregacion: Congregacion = {
+    nombre: nombreCongregacion,
+    numero: numeroCongregacion,
+    ciudad,
+    provincia,
+    pais,
+    idioma,
+    circuito: circuitoSeleccionado,
+    seccion: seccionCircuito,
+    diaSemana,
+    horaSemana,
+    diaFin,
+    horaFin
+  };
+
+  congregaciones = [...congregaciones, congregacion];
+
+  // limpiar formulario
+  nombreCongregacion = '';
+  numeroCongregacion = '';
+  ciudad = '';
+  provincia = '';
+  circuitoSeleccionado = '';
+  seccionCircuito = '';
+  diaSemana = '';
+  horaSemana = '';
+  diaFin = '';
+  horaFin = '';
+
+  mostrarFormularioCongregacion = false;
+}
+
+  type Congregacion = {
+  circuito: string;
+  seccion: string;
+  nombre: string;
+  numero: string;
+  ciudad: string;
+  provincia: string;
+  pais: string;
+  idioma: string;
+  diaSemana: string;
+  horaSemana: string;
+  diaFin: string;
+  horaFin: string;
+};
+
+let congregaciones: Congregacion[] = [];
+
+let nombreCongregacion = '';
+let numeroCongregacion = '';
+let ciudad = '';
+let provincia = '';
+let pais = 'Cuba';
+let idioma = 'S';
+
+let diaSemana = '';
+let horaSemana = '';
+
+let diaFin = '';
+let horaFin = '';
+
 </script>
 
 <header class="header">
@@ -300,10 +373,168 @@
 
 
   {#if vistaActual === 'congregaciones'}
-    <Panel titulo="Congregaciones">
-      <p>Vista de Congregaciones (en construcción)</p>
-    </Panel>
-  {/if}
+  <Panel titulo="Congregaciones">
+
+    <div class="header-congregaciones">
+      <button
+        class="btn-primario"
+        on:click={() => mostrarFormularioCongregacion = true}
+      >
+        ➕ Nueva congregación
+      </button>
+    </div>
+
+
+{#if mostrarFormularioCongregacion}
+  <div class="formulario-congregacion">
+    <h3>Nueva congregación</h3>
+
+    <!-- DATOS BÁSICOS -->
+    <div class="fila">
+      <div class="campo">
+        <label>Nombre de congregación *</label>
+        <input
+          type="text"
+          placeholder="Ej: AEROPUERTO - HOLGUÍN"
+          bind:value={nombreCongregacion}
+        />
+      </div>
+
+      <div class="campo">
+        <label>Número de congregación</label>
+        <input
+          type="text"
+          placeholder="Ej: 15636"
+          bind:value={numeroCongregacion}
+        />
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="campo">
+        <label>Ciudad *</label>
+        <input
+          type="text"
+          placeholder="Ej: HOLGUÍN"
+          bind:value={ciudad}
+        />
+      </div>
+
+      <div class="campo">
+        <label>Provincia / Estado</label>
+        <input
+          type="text"
+          placeholder="Ej: HG"
+          bind:value={provincia}
+        />
+      </div>
+    </div>
+
+    <!-- REUNIÓN ENTRE SEMANA -->
+    <div class="fila">
+      <div class="campo">
+        <label>Reunión entre semana (día)</label>
+        <select bind:value={diaSemana}>
+          <option value="">Seleccione el día</option>
+          <option value="Lunes">Lunes</option>
+          <option value="Martes">Martes</option>
+          <option value="Miércoles">Miércoles</option>
+          <option value="Jueves">Jueves</option>
+          <option value="Viernes">Viernes</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Hora</label>
+        <input type="time" bind:value={horaSemana} />
+      </div>
+    </div>
+
+    <!-- REUNIÓN FIN DE SEMANA -->
+    <div class="fila">
+      <div class="campo">
+        <label>Reunión fin de semana (día)</label>
+        <select bind:value={diaFin}>
+          <option value="">Seleccione el día</option>
+          <option value="Sábado">Sábado</option>
+          <option value="Domingo">Domingo</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label>Hora</label>
+        <input type="time" bind:value={horaFin} />
+      </div>
+    </div>
+
+    <!-- ACCIONES -->
+    <div class="acciones-formulario">
+      <button class="btn-secundario" on:click={cancelarFormulario}>
+        Cancelar
+      </button>
+
+      <button class="btn-primario" on:click={guardarCongregacion}>
+        Guardar
+      </button>
+    </div>
+  </div>
+{/if}
+
+{#if !mostrarFormularioCongregacion && congregaciones.length === 0}
+  <p class="texto-vacio">
+    Aún no hay congregaciones registradas.
+  </p>
+{/if}
+
+{#if !mostrarFormularioCongregacion && congregaciones.length > 0}
+  <div class="lista-congregaciones">
+    {#each congregaciones as c}
+      <div class="item-congregacion">
+        <strong>{c.nombre}</strong>
+
+        <p class="sub">
+      Nº {c.numero} · {c.ciudad}, {c.provincia}
+    </p>
+
+    <p>
+      Circuito {c.circuito} – Sección {c.seccion}
+    </p>
+
+    <p>
+      Reunión entre semana: {c.diaSemana} – {c.horaSemana}
+    </p>
+
+    <p>
+      Reunión fin de semana: {c.diaFin} – {c.horaFin}
+    </p>
+  </div>
+{/each}
+  </div>
+{/if}
+
+<style>
+  .item-congregacion {
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: #fff;
+    margin-bottom: 1rem;
+  }
+
+  .item-congregacion strong {
+    font-size: 1.1rem;
+  }
+
+  .item-congregacion .sub {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0.25rem 0 0.75rem;
+  }
+</style>
+
+  </Panel>
+
+{/if}
 
   {#if vistaActual === 'visitas'}
     <Panel titulo="Visitas">
@@ -673,6 +904,17 @@ header.header {
   margin-top: 24px;
   padding-top: 12px;
   border-top: 1px solid #ddd;
+}
+
+.header-congregaciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.texto-vacio {
+  color: #666;
+  font-style: italic;
 }
 
 </style>
