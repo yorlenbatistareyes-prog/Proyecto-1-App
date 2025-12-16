@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Panel from '../lib/components/Panel.svelte';
 
   /* ======================
@@ -115,6 +116,8 @@
   let menuAbierto = false;
 
    let mostrarFormularioCongregacion = false;
+let indiceCongregacionEditando: number | null = null;
+
 
   // estado del formulario
   let circuitoSeleccionado = '';
@@ -125,6 +128,11 @@
 }
 
 function guardarCongregacion() {
+  if (!circuitoSeleccionado) {
+    alert('Debe seleccionar un circuito');
+    return;
+  }
+
   const congregacion: Congregacion = {
     nombre: nombreCongregacion,
     numero: numeroCongregacion,
@@ -140,7 +148,19 @@ function guardarCongregacion() {
     horaFin
   };
 
-  congregaciones = [...congregaciones, congregacion];
+  if (indiceCongregacionEditando === null) {
+    // crear nueva
+    congregaciones = [...congregaciones, congregacion];
+  } else {
+    // editar existente
+    congregaciones[indiceCongregacionEditando] = congregacion;
+    congregaciones = [...congregaciones];
+  }
+
+  localStorage.setItem(
+    'congregaciones',
+    JSON.stringify(congregaciones)
+  );
 
   // limpiar formulario
   nombreCongregacion = '';
@@ -154,7 +174,47 @@ function guardarCongregacion() {
   diaFin = '';
   horaFin = '';
 
+  indiceCongregacionEditando = null;
   mostrarFormularioCongregacion = false;
+}
+
+  function editarCongregacion(c: Congregacion, index: number) {
+  indiceCongregacionEditando = index;
+
+  // cargar datos en el formulario
+  nombreCongregacion = c.nombre;
+  numeroCongregacion = c.numero;
+  ciudad = c.ciudad;
+  provincia = c.provincia;
+  pais = c.pais;
+  idioma = c.idioma;
+  circuitoSeleccionado = c.circuito;
+  seccionCircuito = c.seccion;
+  diaSemana = c.diaSemana;
+  horaSemana = c.horaSemana;
+  diaFin = c.diaFin;
+  horaFin = c.horaFin;
+
+  mostrarFormularioCongregacion = true;
+}
+
+function prepararNuevaCongregacion() {
+  indiceCongregacionEditando = null;
+
+  nombreCongregacion = '';
+  numeroCongregacion = '';
+  ciudad = '';
+  provincia = '';
+  pais = 'Cuba';
+  idioma = 'S';
+  circuitoSeleccionado = '';
+  seccionCircuito = '';
+  diaSemana = '';
+  horaSemana = '';
+  diaFin = '';
+  horaFin = '';
+
+  mostrarFormularioCongregacion = true;
 }
 
   type Congregacion = {
@@ -173,6 +233,12 @@ function guardarCongregacion() {
 };
 
 let congregaciones: Congregacion[] = [];
+onMount(() => {
+  const guardadas = localStorage.getItem('congregaciones');
+  if (guardadas) {
+    congregaciones = JSON.parse(guardadas);
+  }
+});
 
 let nombreCongregacion = '';
 let numeroCongregacion = '';
@@ -377,19 +443,43 @@ let horaFin = '';
 
     <div class="header-congregaciones">
       <button
-        class="btn-primario"
-        on:click={() => mostrarFormularioCongregacion = true}
-      >
-        ➕ Nueva congregación
-      </button>
+  class="btn-primario"
+  on:click={prepararNuevaCongregacion}
+>
+  ➕ Nueva congregación
+</button>
     </div>
 
 
 {#if mostrarFormularioCongregacion}
   <div class="formulario-congregacion">
-    <h3>Nueva congregación</h3>
+    <h3>{indiceCongregacionEditando === null ? 'Nueva congregación' : 'Editar congregación'}</h3>
 
     <!-- DATOS BÁSICOS -->
+    <div class="fila">
+  <div class="campo">
+    <label>Circuito *</label>
+    <select bind:value={circuitoSeleccionado}>
+      <option value="">Seleccione un circuito</option>
+
+      {#each circuitos as circuito}
+        <option value={circuito.nombre}>
+          {circuito.nombre}
+        </option>
+      {/each}
+    </select>
+  </div>
+
+  <div class="campo">
+    <label>Sección del circuito</label>
+    <input
+      type="text"
+      placeholder="Ej: A"
+      bind:value={seccionCircuito}
+    />
+  </div>
+</div>
+
     <div class="fila">
       <div class="campo">
         <label>Nombre de congregación *</label>
@@ -487,29 +577,46 @@ let horaFin = '';
 {/if}
 
 {#if !mostrarFormularioCongregacion && congregaciones.length > 0}
-  <div class="lista-congregaciones">
-    {#each congregaciones as c}
-      <div class="item-congregacion">
-        <strong>{c.nombre}</strong>
+  <table class="tabla-congregaciones">
+  <thead>
+    <tr>
+      <th>Número</th>
+      <th>Nombre</th>
+      <th>Ciudad</th>
+      <th>Estado / Provincia</th>
+      <th>País</th>
+      <th>Circuito</th>
+      <th>Sección</th>
+      <th>Entre semana</th>
+      <th>Fin de semana</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
 
-        <p class="sub">
-      Nº {c.numero} · {c.ciudad}, {c.provincia}
-    </p>
-
-    <p>
-      Circuito {c.circuito} – Sección {c.seccion}
-    </p>
-
-    <p>
-      Reunión entre semana: {c.diaSemana} – {c.horaSemana}
-    </p>
-
-    <p>
-      Reunión fin de semana: {c.diaFin} – {c.horaFin}
-    </p>
-  </div>
-{/each}
-  </div>
+  <tbody>
+    {#each congregaciones as c, index}
+      <tr>
+        <td>{c.numero}</td>
+        <td>{c.nombre}</td>
+        <td>{c.ciudad}</td>
+        <td>{c.provincia}</td>
+        <td>{c.pais}</td>
+        <td>{c.circuito}</td>
+        <td>{c.seccion}</td>
+        <td>{c.diaSemana} {c.horaSemana}</td>
+        <td>{c.diaFin} {c.horaFin}</td>
+        <td>
+<button
+  class="btn-secundario"
+  on:click={() => editarCongregacion(c, index)}
+>
+  ACCIONES
+</button>
+        </td>
+      </tr>
+    {/each}
+  </tbody>
+</table>
 {/if}
 
 <style>
@@ -915,6 +1022,30 @@ header.header {
 .texto-vacio {
   color: #666;
   font-style: italic;
+}
+
+.tabla-congregaciones {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tabla-congregaciones th,
+.tabla-congregaciones td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.tabla-congregaciones th {
+  font-weight: 600;
+  background: #f7f7f7;
+  color: #444;
+  white-space: nowrap;
+}
+
+.tabla-congregaciones td {
+  white-space: nowrap;
 }
 
 </style>
