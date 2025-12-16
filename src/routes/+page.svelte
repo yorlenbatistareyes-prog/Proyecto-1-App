@@ -474,7 +474,7 @@ let horaFin = '';
     <label>Sección del circuito</label>
     <input
       type="text"
-      placeholder="Ej: A"
+      placeholder=" Ej: A"
       bind:value={seccionCircuito}
     />
   </div>
