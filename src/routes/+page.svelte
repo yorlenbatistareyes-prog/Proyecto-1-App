@@ -307,7 +307,34 @@
         </table>
       </div>
     {:else}
-      {/if}
+      <div class="form-grande">
+        <h3>{indiceCongregacionEditando !== null ? 'Editar' : 'Nueva'} Congregación</h3>
+        
+        <div class="campo">
+          <label>Nombre de la Congregación *</label>
+          <input type="text" bind:value={nuevaCongregacion.nombre} placeholder="Ej: Central" />
+        </div>
+
+        <div class="campo">
+          <label>Circuito *</label>
+          <input type="text" bind:value={nuevaCongregacion.circuito} placeholder="Ej: HG-01" />
+        </div>
+
+        <div class="campo">
+          <label>Ciudad</label>
+          <input type="text" bind:value={nuevaCongregacion.ciudad} placeholder="Ej: Holguín" />
+        </div>
+
+        <div class="flex-end" style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="button" class="btn-secundario" on:click={() => mostrarFormularioCongregacion = false}>
+            Cancelar
+          </button>
+          <button type="button" class="btn-primario" on:click={guardarCongregacion}>
+            {indiceCongregacionEditando !== null ? 'Actualizar' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    {/if}
   </Panel>
 {/if}
   
@@ -538,3 +565,4 @@
   margin: 10px 20px;
 }
 </style>
+
