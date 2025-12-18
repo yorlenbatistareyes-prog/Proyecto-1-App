@@ -3,1049 +3,538 @@
   import Panel from '../lib/components/Panel.svelte';
 
   /* ======================
-     VISTAS PRINCIPALES
+     TIPOS Y ESTADOS
   ====================== */
-  type Vista =
-    | 'inicio'
-    | 'circuito'
-    | 'congregaciones'
-    | 'visitas'
-    | 'registros'
-    | 'configuracion';
+  type Vista = 'inicio' | 'circuito' | 'congregaciones' | 'visitas' | 'registros' | 'configuracion';
 
-  let vistaActual: Vista = 'inicio';
-
-  /* ======================
-     INICIO
-  ====================== */
-  let seccion: 'registros' | 'pendientes' = 'registros';
-  let asuntoSeleccionado: any = null;
-
-  const visitasRecientes = [
-    { fecha: '2025-12-09', congregacion: 'Congregación Norte' },
-    { fecha: '2025-12-08', congregacion: 'Congregación Sur' },
-    { fecha: '2025-12-07', congregacion: 'Congregación Este' },
-    { fecha: '2025-12-06', congregacion: 'Congregación Oeste' },
-    { fecha: '2025-12-05', congregacion: 'Congregación Central' }
-  ];
-
-  let asuntosPendientes = [
-    { id: 1, texto: 'Visita pendiente a Congregación Norte' }
-  ];
-
-  function verRegistros() {
-    seccion = 'registros';
-  }
-
-  function verPendientes() {
-    seccion = 'pendientes';
-  }
-
-  function abrirAsunto(asunto: any) {
-    asuntoSeleccionado = asunto;
-  }
-
-  /* ======================
-     CIRCUITOS
-  ====================== */
-
-  type Circuito = {
+  interface Circuito {
     nombre: string;
     idioma: string;
     pais: string;
-  };
-
-  let creandoCircuito = false;
-
-  let circuitos: Circuito[] = [
-    {
-      nombre: 'HG-06',
-      idioma: 'S',
-      pais: 'Cuba'
-    }
-  ];
-
-  let nuevoCircuito: Circuito = {
-    nombre: '',
-    idioma: '',
-    pais: ''
-  };
-
-  let indiceEditando: number | null = null;
-  let errorFormulario = '';
-
-
-  function guardarCircuito() {
-  errorFormulario = '';
-
-  if (!nuevoCircuito.nombre.trim()) {
-    errorFormulario = 'El nombre del circuito es obligatorio';
-    return;
   }
 
-  if (indiceEditando === null) {
-    // Crear
-    circuitos = [...circuitos, { ...nuevoCircuito }];
-  } else {
-    // Editar
-    circuitos[indiceEditando] = { ...nuevoCircuito };
-    circuitos = [...circuitos];
+  interface Congregacion {
+    circuito: string;
+    seccion: string;
+    nombre: string;
+    numero: string;
+    ciudad: string;
+    provincia: string;
+    pais: string;
+    idioma: string;
+    diaSemana: string;
+    horaSemana: string;
+    diaFin: string;
+    horaFin: string;
   }
 
-  cancelarEdicion();
-}
-
-  function cancelarEdicion() {
-    creandoCircuito = false;
-    indiceEditando = null;
-    nuevoCircuito = {
-      nombre: '',
-      idioma: '',
-      pais: ''
-    };
-  }
-
-  function editarCircuito(circuito: Circuito, index: number) {
-    creandoCircuito = true;
-    indiceEditando = index;
-    nuevoCircuito = { ...circuito };
-  }
-   /* ======================
-     UI
-  ====================== */
+  let vistaActual: Vista = 'inicio';
   let menuAbierto = false;
 
-   let mostrarFormularioCongregacion = false;
-let indiceCongregacionEditando: number | null = null;
+  /* LÓGICA: INICIO */
+  let seccionInicio: 'registros' | 'pendientes' = 'registros';
+  const visitasRecientes = [
+    { fecha: '2025-12-09', congregacion: 'Congregación Norte' },
+    { fecha: '2025-12-08', congregacion: 'Congregación Sur' }
+  ];
+  let asuntosPendientes = [{ id: 1, texto: 'Visita pendiente a Congregación Norte' }];
 
+  /* LÓGICA: CIRCUITOS */
+  let circuitos: Circuito[] = [{ nombre: 'HG-06', idioma: 'S', pais: 'Cuba' }];
+  let creandoCircuito = false;
+  let indiceCircuitoEditando: number | null = null;
+  let nuevoCircuito: Circuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
 
-  // estado del formulario
-  let circuitoSeleccionado = '';
-  let seccionCircuito = '';
-
-  function cancelarFormulario() {
-  mostrarFormularioCongregacion = false;
-}
-
-function guardarCongregacion() {
-  if (!circuitoSeleccionado) {
-    alert('Debe seleccionar un circuito');
-    return;
+  function prepararNuevoCircuito() {
+    nuevoCircuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
+    indiceCircuitoEditando = null;
+    creandoCircuito = true;
   }
 
-  const congregacion: Congregacion = {
-    nombre: nombreCongregacion,
-    numero: numeroCongregacion,
-    ciudad,
-    provincia,
-    pais,
-    idioma,
-    circuito: circuitoSeleccionado,
-    seccion: seccionCircuito,
-    diaSemana,
-    horaSemana,
-    diaFin,
-    horaFin
+  function editarCircuito(c: Circuito, index: number) {
+    nuevoCircuito = { ...c };
+    indiceCircuitoEditando = index;
+    creandoCircuito = true;
+  }
+
+  function guardarCircuito() {
+    if (!nuevoCircuito.nombre.trim()) return alert('El nombre es obligatorio');
+    if (indiceCircuitoEditando === null) {
+      circuitos = [...circuitos, { ...nuevoCircuito }];
+    } else {
+      circuitos[indiceCircuitoEditando] = { ...nuevoCircuito };
+      circuitos = [...circuitos];
+    }
+    creandoCircuito = false;
+  }
+
+  function eliminarCircuito(index: number) {
+    if (confirm('¿Estás seguro de que deseas eliminar este circuito? Se borrará permanentemente.')) {
+      // 1. Filtramos el array de circuitos
+      circuitos = circuitos.filter((_, i) => i !== index);
+      
+      // 2. Opcional: Podrías guardar en localStorage si decides persistir circuitos también
+      // localStorage.setItem('circuitos', JSON.stringify(circuitos));
+    }
+  }
+
+  /* LÓGICA: CONGREGACIONES */
+  let congregaciones: Congregacion[] = [];
+  let mostrarFormularioCongregacion = false;
+  let indiceCongregacionEditando: number | null = null;
+  
+  const moldeCongregacion: Congregacion = {
+    circuito: '', seccion: '', nombre: '', numero: '',
+    ciudad: '', provincia: '', pais: 'Cuba', idioma: 'S',
+    diaSemana: '', horaSemana: '', diaFin: '', horaFin: ''
   };
+  
+  let nuevaCongregacion: Congregacion = { ...moldeCongregacion };
 
-  if (indiceCongregacionEditando === null) {
-    // crear nueva
-    congregaciones = [...congregaciones, congregacion];
-  } else {
-    // editar existente
-    congregaciones[indiceCongregacionEditando] = congregacion;
-    congregaciones = [...congregaciones];
-  }
-
-  localStorage.setItem(
-    'congregaciones',
-    JSON.stringify(congregaciones)
+  let textoBusqueda = ''; // Guardará lo que escribas en el buscador
+  // Esta variable se actualizará sola cada vez que cambie 'textoBusqueda' o 'congregaciones'
+  $: congregacionesFiltradas = congregaciones.filter(c => 
+    c.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
+    c.ciudad.toLowerCase().includes(textoBusqueda.toLowerCase())
   );
 
-  // limpiar formulario
-  nombreCongregacion = '';
-  numeroCongregacion = '';
-  ciudad = '';
-  provincia = '';
-  circuitoSeleccionado = '';
-  seccionCircuito = '';
-  diaSemana = '';
-  horaSemana = '';
-  diaFin = '';
-  horaFin = '';
+  onMount(() => {
+    const guardadas = localStorage.getItem('congregaciones');
+    if (guardadas) congregaciones = JSON.parse(guardadas);
+  });
 
-  indiceCongregacionEditando = null;
-  mostrarFormularioCongregacion = false;
-}
+  function prepararNuevaCongregacion() {
+    nuevaCongregacion = { ...moldeCongregacion };
+    indiceCongregacionEditando = null;
+    mostrarFormularioCongregacion = true;
+  }
 
   function editarCongregacion(c: Congregacion, index: number) {
-  indiceCongregacionEditando = index;
-
-  // cargar datos en el formulario
-  nombreCongregacion = c.nombre;
-  numeroCongregacion = c.numero;
-  ciudad = c.ciudad;
-  provincia = c.provincia;
-  pais = c.pais;
-  idioma = c.idioma;
-  circuitoSeleccionado = c.circuito;
-  seccionCircuito = c.seccion;
-  diaSemana = c.diaSemana;
-  horaSemana = c.horaSemana;
-  diaFin = c.diaFin;
-  horaFin = c.horaFin;
-
-  mostrarFormularioCongregacion = true;
-}
-
-function prepararNuevaCongregacion() {
-  indiceCongregacionEditando = null;
-
-  nombreCongregacion = '';
-  numeroCongregacion = '';
-  ciudad = '';
-  provincia = '';
-  pais = 'Cuba';
-  idioma = 'S';
-  circuitoSeleccionado = '';
-  seccionCircuito = '';
-  diaSemana = '';
-  horaSemana = '';
-  diaFin = '';
-  horaFin = '';
-
-  mostrarFormularioCongregacion = true;
-}
-
-  type Congregacion = {
-  circuito: string;
-  seccion: string;
-  nombre: string;
-  numero: string;
-  ciudad: string;
-  provincia: string;
-  pais: string;
-  idioma: string;
-  diaSemana: string;
-  horaSemana: string;
-  diaFin: string;
-  horaFin: string;
-};
-
-let congregaciones: Congregacion[] = [];
-onMount(() => {
-  const guardadas = localStorage.getItem('congregaciones');
-  if (guardadas) {
-    congregaciones = JSON.parse(guardadas);
+    nuevaCongregacion = { ...c };
+    indiceCongregacionEditando = index;
+    mostrarFormularioCongregacion = true;
   }
-});
 
-let nombreCongregacion = '';
-let numeroCongregacion = '';
-let ciudad = '';
-let provincia = '';
-let pais = 'Cuba';
-let idioma = 'S';
+  function guardarCongregacion() {
+    if (!nuevaCongregacion.circuito || !nuevaCongregacion.nombre) {
+      alert('Complete los campos obligatorios (*)');
+      return;
+    }
 
-let diaSemana = '';
-let horaSemana = '';
+    if (indiceCongregacionEditando === null) {
+      congregaciones = [...congregaciones, { ...nuevaCongregacion }];
+    } else {
+      congregaciones[indiceCongregacionEditando] = { ...nuevaCongregacion };
+      congregaciones = [...congregaciones];
+    }
+    localStorage.setItem('congregaciones', JSON.stringify(congregaciones));
+    mostrarFormularioCongregacion = false;
+  }
 
-let diaFin = '';
-let horaFin = '';
-
+  function eliminarCongregacion(index: number) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta congregación?')) {
+      congregaciones = congregaciones.filter((_, i) => i !== index);
+      localStorage.setItem('congregaciones', JSON.stringify(congregaciones));
+    }
+  }
 </script>
 
-<header class="header">
+{#if menuAbierto}
+  <div class="overlay" on:click={() => menuAbierto = false}></div>
+  
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h2>Menú</h2>
+      <button class="btn-cerrar" on:click={() => menuAbierto = false}>×</button>
+    </div>
 
-  <!-- PARTE BLANCA -->
+    <div class="menu-items">
+      <button class:active={vistaActual === 'inicio'} on:click={() => { vistaActual = 'inicio'; menuAbierto = false; }}>
+        <span>🏠</span> Inicio
+      </button>
+      
+      <button class:active={vistaActual === 'circuito'} on:click={() => { vistaActual = 'circuito'; menuAbierto = false; }}>
+        <span>🌐</span> Circuito
+      </button>
+      
+      <button class:active={vistaActual === 'congregaciones'} on:click={() => { vistaActual = 'congregaciones'; menuAbierto = false; }}>
+        <span>👥</span> Congregaciones
+      </button>
+
+      <div class="separador"></div>
+
+      <button class:active={vistaActual === 'configuracion'} on:click={() => { vistaActual = 'configuracion'; menuAbierto = false; }}>
+        <span>⚙️</span> Configuración
+      </button>
+    </div>
+  </nav>
+{/if}
+
+<header class="header">
   <div class="header-top">
-    <button class="menu-toggle" on:click={() => menuAbierto = !menuAbierto}>
+    <button class="menu-toggle" on:click|stopPropagation={() => menuAbierto = true}>
       ☰
     </button>
+
     <div class="header-logo">
       <div class="logo-text">AV</div>
     </div>
+
     <div class="header-info">
       <h1>Asistente de Visitas</h1>
       <p>Documenta todas tus visitas</p>
     </div>
-    <!-- Botón de Configuración ajustado -->
-    <button
-  class="config-button"
-  on:click={() => vistaActual = 'configuracion'}
->
-  <img class="icono" src="/icons/configuracion.svg" alt="Configuración" />
-</button>
+
+    <div class="spacer"></div>
+
+    <button class="config-button" on:click={() => vistaActual = 'configuracion'}>
+      ⚙️
+    </button>
   </div>
-
-  <!-- FRANJA GRIS -->
-  <div class="header-bottom"></div>
-
 </header>
 
 <main>
-
   {#if vistaActual === 'inicio'}
-
     <div class="acciones">
-      <button
-        class:activo={seccion === 'registros'}
-        on:click={verRegistros}
-      >
+      <button class:activo={seccionInicio === 'registros'} on:click={() => seccionInicio = 'registros'}>
         Visitas recientes
       </button>
-
-      <button
-        class:activo={seccion === 'pendientes'}
-        on:click={verPendientes}
-      >
+      <button class:activo={seccionInicio === 'pendientes'} on:click={() => seccionInicio = 'pendientes'}>
         Asuntos pendientes
       </button>
     </div>
 
-    {#if seccion === 'registros'}
-      <Panel titulo="Visitas recientes">
-        <ul>
-          {#each visitasRecientes as visita}
-            <li>
-              <strong>Fecha:</strong> {visita.fecha} —
-              <strong>Congregación:</strong> {visita.congregacion}
-            </li>
+    <Panel titulo={seccionInicio === 'registros' ? "Visitas recientes" : "Asuntos pendientes"}>
+      <ul>
+        {#if seccionInicio === 'registros'}
+          {#each visitasRecientes as v}
+            <li><strong>{v.fecha}:</strong> {v.congregacion}</li>
           {/each}
-        </ul>
-      </Panel>
-    {/if}
-
-    {#if seccion === 'pendientes'}
-      <Panel titulo="Asuntos pendientes">
-        <ul>
-          {#each asuntosPendientes as asunto}
-            <li>
-              <button on:click={() => abrirAsunto(asunto)}>
-                {asunto.texto}
-              </button>
-            </li>
+        {:else}
+          {#each asuntosPendientes as a}
+            <li>{a.texto}</li>
           {/each}
-        </ul>
-      </Panel>
-    {/if}
-
+        {/if}
+      </ul>
+    </Panel>
   {/if}
 
-  {#if vistaActual === 'circuito' && !creandoCircuito}
-
-  <Panel titulo="Circuitos">
-
-    <!-- CABECERA + BOTÓN -->
-    <div class="circuitos-header">
-      <button
-        class="btn-primario"
-        on:click={() => {
-          creandoCircuito = true;
-          indiceEditando = null;
-          nuevoCircuito = { nombre: '', idioma: '', pais: '' };
-        }}
-      >
-        Nuevo circuito
+  {#if vistaActual === 'circuito'}
+    <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
+      {#if !creandoCircuito}
+        <div class="flex-end"><button class="btn-primario" on:click={prepararNuevoCircuito}>Nuevo circuito</button></div>
+        <table class="tabla">
+          <thead><tr><th>Nombre</th><th>Idioma</th><th>País</th><th>Acciones</th></tr></thead>
+          <tbody>
+            {#each circuitos as c, i}
+              <tr>
+  <td>{c.nombre}</td>
+  <td>{c.idioma}</td>
+  <td>{c.pais}</td>
+  <td>
+    <div class="acciones-tabla">
+      <button class="btn-secundario" on:click={() => editarCircuito(c, i)}>
+        Editar
+      </button>
+      <button class="btn-eliminar" on:click={() => eliminarCircuito(i)}>
+        Eliminar
       </button>
     </div>
-
-    <!-- TABLA -->
-    <table class="tabla-circuitos">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Idioma</th>
-          <th>País</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {#each circuitos as circuito, index}
-          <tr>
-            <td>{circuito.nombre}</td>
-            <td>{circuito.idioma}</td>
-            <td>{circuito.pais}</td>
-            <td>
-              <button
-                class="btn-secundario"
-                on:click={() => editarCircuito(circuito, index)}
-              >
-                Editar
-              </button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-
-  </Panel>
-
-{/if}
-
-{#if vistaActual === 'circuito' && creandoCircuito}
-
-  <Panel titulo={indiceEditando === null ? 'Nuevo circuito' : 'Editar circuito'}>
-
-    <form class="form-grande" on:submit|preventDefault={guardarCircuito}>
-
-      <div class="campo">
-        <label>Nombre del circuito</label>
-        <input
-          type="text"
-          bind:value={nuevoCircuito.nombre}
-          placeholder="Ej: HG-06"
-        />
-      </div>
-
-      <div class="campo">
-        <label>Idioma</label>
-        <input
-          type="text"
-          bind:value={nuevoCircuito.idioma}
-          placeholder="Ej: S"
-        />
-      </div>
-
-      <div class="campo">
-        <label>País</label>
-        <input
-          type="text"
-          bind:value={nuevoCircuito.pais}
-          placeholder="Ej: Cuba"
-        />
-      </div>
-
-      <div class="acciones-inferiores">
-        <button
-          type="button"
-          class="btn-secundario"
-          on:click={cancelarEdicion}
-        >
-          Cancelar
-        </button>
-
-        <button type="submit" class="btn-primario">
-          {indiceEditando === null ? 'Guardar' : 'Guardar cambios'}
-        </button>
-      </div>
-
-    </form>
-
-  </Panel>
-
-{/if}
-
+  </td>
+</tr>
+            {/each}
+          </tbody>
+        </table>
+      {:else}
+        <form class="form-grande" on:submit|preventDefault={guardarCircuito}>
+          <div class="campo"><label>Nombre</label><input bind:value={nuevoCircuito.nombre} placeholder="HG-06" /></div>
+          <div class="campo"><label>Idioma</label><input bind:value={nuevoCircuito.idioma} /></div>
+          <div class="campo"><label>País</label><input bind:value={nuevoCircuito.pais} /></div>
+          <div class="acciones-inferiores">
+            <button type="button" class="btn-secundario" on:click={() => creandoCircuito = false}>Cancelar</button>
+            <button type="submit" class="btn-primario">Guardar</button>
+          </div>
+        </form>
+      {/if}
+    </Panel>
+  {/if}
 
   {#if vistaActual === 'congregaciones'}
   <Panel titulo="Congregaciones">
+    {#if !mostrarFormularioCongregacion}
+      <div class="flex-end">
+        <button class="btn-primario" on:click={prepararNuevaCongregacion}>➕ Nueva</button>
+      </div>
 
-    <div class="header-congregaciones">
-      <button
-  class="btn-primario"
-  on:click={prepararNuevaCongregacion}
->
-  ➕ Nueva congregación
-</button>
-    </div>
-
-
-{#if mostrarFormularioCongregacion}
-  <div class="formulario-congregacion">
-    <h3>{indiceCongregacionEditando === null ? 'Nueva congregación' : 'Editar congregación'}</h3>
-
-    <!-- DATOS BÁSICOS -->
-    <div class="fila">
-  <div class="campo">
-    <label>Circuito *</label>
-    <select bind:value={circuitoSeleccionado}>
-      <option value="">Seleccione un circuito</option>
-
-      {#each circuitos as circuito}
-        <option value={circuito.nombre}>
-          {circuito.nombre}
-        </option>
-      {/each}
-    </select>
-  </div>
-
-  <div class="campo">
-    <label>Sección del circuito</label>
-    <input
-      type="text"
-      placeholder=" Ej: A"
-      bind:value={seccionCircuito}
-    />
-  </div>
-</div>
-
-    <div class="fila">
-      <div class="campo">
-        <label>Nombre de congregación *</label>
-        <input
-          type="text"
-          placeholder="Ej: AEROPUERTO - HOLGUÍN"
-          bind:value={nombreCongregacion}
+      <div class="buscador-container">
+        <input 
+          type="text" 
+          placeholder="Buscar congregación por nombre o ciudad..." 
+          bind:value={textoBusqueda} 
+          class="input-buscador"
         />
       </div>
 
-      <div class="campo">
-        <label>Número de congregación</label>
-        <input
-          type="text"
-          placeholder="Ej: 15636"
-          bind:value={numeroCongregacion}
-        />
+      <div class="table-container">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Circuito</th>
+              <th>Ciudad</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each congregacionesFiltradas as c, i}
+              <tr>
+                <td>{c.nombre}</td>
+                <td>{c.circuito}</td>
+                <td>{c.ciudad}</td>
+                <td>
+                  <div class="acciones-tabla">
+                    <button class="btn-secundario" on:click={() => editarCongregacion(c, i)}>
+                      Editar
+                    </button>
+                    <button class="btn-eliminar" on:click={() => eliminarCongregacion(i)}>
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
       </div>
-    </div>
-
-    <div class="fila">
-      <div class="campo">
-        <label>Ciudad *</label>
-        <input
-          type="text"
-          placeholder="Ej: HOLGUÍN"
-          bind:value={ciudad}
-        />
-      </div>
-
-      <div class="campo">
-        <label>Provincia / Estado</label>
-        <input
-          type="text"
-          placeholder="Ej: HG"
-          bind:value={provincia}
-        />
-      </div>
-    </div>
-
-    <!-- REUNIÓN ENTRE SEMANA -->
-    <div class="fila">
-      <div class="campo">
-        <label>Reunión entre semana (día)</label>
-        <select bind:value={diaSemana}>
-          <option value="">Seleccione el día</option>
-          <option value="Lunes">Lunes</option>
-          <option value="Martes">Martes</option>
-          <option value="Miércoles">Miércoles</option>
-          <option value="Jueves">Jueves</option>
-          <option value="Viernes">Viernes</option>
-        </select>
-      </div>
-
-      <div class="campo">
-        <label>Hora</label>
-        <input type="time" bind:value={horaSemana} />
-      </div>
-    </div>
-
-    <!-- REUNIÓN FIN DE SEMANA -->
-    <div class="fila">
-      <div class="campo">
-        <label>Reunión fin de semana (día)</label>
-        <select bind:value={diaFin}>
-          <option value="">Seleccione el día</option>
-          <option value="Sábado">Sábado</option>
-          <option value="Domingo">Domingo</option>
-        </select>
-      </div>
-
-      <div class="campo">
-        <label>Hora</label>
-        <input type="time" bind:value={horaFin} />
-      </div>
-    </div>
-
-    <!-- ACCIONES -->
-    <div class="acciones-formulario">
-      <button class="btn-secundario" on:click={cancelarFormulario}>
-        Cancelar
-      </button>
-
-      <button class="btn-primario" on:click={guardarCongregacion}>
-        Guardar
-      </button>
-    </div>
-  </div>
-{/if}
-
-{#if !mostrarFormularioCongregacion && congregaciones.length === 0}
-  <p class="texto-vacio">
-    Aún no hay congregaciones registradas.
-  </p>
-{/if}
-
-{#if !mostrarFormularioCongregacion && congregaciones.length > 0}
-  <table class="tabla-congregaciones">
-  <thead>
-    <tr>
-      <th>Número</th>
-      <th>Nombre</th>
-      <th>Ciudad</th>
-      <th>Estado / Provincia</th>
-      <th>País</th>
-      <th>Circuito</th>
-      <th>Sección</th>
-      <th>Entre semana</th>
-      <th>Fin de semana</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {#each congregaciones as c, index}
-      <tr>
-        <td>{c.numero}</td>
-        <td>{c.nombre}</td>
-        <td>{c.ciudad}</td>
-        <td>{c.provincia}</td>
-        <td>{c.pais}</td>
-        <td>{c.circuito}</td>
-        <td>{c.seccion}</td>
-        <td>{c.diaSemana} {c.horaSemana}</td>
-        <td>{c.diaFin} {c.horaFin}</td>
-        <td>
-<button
-  class="btn-secundario"
-  on:click={() => editarCongregacion(c, index)}
->
-  ACCIONES
-</button>
-        </td>
-      </tr>
-    {/each}
-  </tbody>
-</table>
-{/if}
-
-<style>
-  .item-congregacion {
-    padding: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    background: #fff;
-    margin-bottom: 1rem;
-  }
-
-  .item-congregacion strong {
-    font-size: 1.1rem;
-  }
-
-  .item-congregacion .sub {
-    color: #666;
-    font-size: 0.9rem;
-    margin: 0.25rem 0 0.75rem;
-  }
-</style>
-
+    {:else}
+      {/if}
   </Panel>
-
 {/if}
-
-  {#if vistaActual === 'visitas'}
-    <Panel titulo="Visitas">
-      <p>Vista de Visitas (en construcción)</p>
-    </Panel>
-  {/if}
-
-  {#if vistaActual === 'registros'}
-    <Panel titulo="Registros">
-      <p>Vista de Registros (en construcción)</p>
-    </Panel>
-  {/if}
-
+  
   {#if vistaActual === 'configuracion'}
     <Panel titulo="Configuración">
-      <p>Ajustes de la aplicación</p>
+      <p>Ajustes generales del asistente.</p>
     </Panel>
   {/if}
-
 </main>
 
 <nav class="barra-inferior">
-  <button
-    class:activo={vistaActual === 'inicio'}
-    on:click={() => vistaActual = 'inicio'}
-  >
-    <img class="icono" src="/icons/inicio.svg" alt="Inicio" />
+  <button class:activo={vistaActual === 'inicio'} on:click={() => vistaActual = 'inicio'}>
+    <img class="icono-nav" src="/icons/inicio.svg" alt="Inicio" />
     <span class="texto">Inicio</span>
   </button>
 
-  <button
-    class:activo={vistaActual === 'circuito'}
-    on:click={() => vistaActual = 'circuito'}
-  >
-    <img class="icono" src="/icons/circuitos.svg" alt="Circuito" />
+  <button class:activo={vistaActual === 'circuito'} on:click={() => vistaActual = 'circuito'}>
+    <img class="icono-nav" src="/icons/circuitos.svg" alt="Circuito" />
     <span class="texto">Circuito</span>
   </button>
 
-  <button
-    class:activo={vistaActual === 'congregaciones'}
-    on:click={() => vistaActual = 'congregaciones'}
-  >
-    <img class="icono" src="/icons/congregaciones.svg" alt="Congregaciones" />
+  <button class:activo={vistaActual === 'congregaciones'} on:click={() => vistaActual = 'congregaciones'}>
+    <img class="icono-nav" src="/icons/congregaciones.svg" alt="Congregaciones" />
     <span class="texto">Congregaciones</span>
   </button>
 
-  <button
-    class:activo={vistaActual === 'visitas'}
-    on:click={() => vistaActual = 'visitas'}
-  >
-    <img class="icono" src="/icons/visitas.svg" alt="Visitas" />
+  <button class:activo={vistaActual === 'visitas'} on:click={() => vistaActual = 'visitas'}>
+    <img class="icono-nav" src="/icons/visitas.svg" alt="Visitas" />
     <span class="texto">Visitas</span>
   </button>
 
-  <button
-    class:activo={vistaActual === 'registros'}
-    on:click={() => vistaActual = 'registros'}
-  >
-    <img class="icono" src="/icons/registros.svg" alt="Registros" />
+  <button class:activo={vistaActual === 'registros'} on:click={() => vistaActual = 'registros'}>
+    <img class="icono-nav" src="/icons/registros.svg" alt="Registros" />
     <span class="texto">Registros</span>
   </button>
 </nav>
 
-<aside class="sidebar {menuAbierto ? 'abierto' : 'cerrado'}">
-  <h2>Menú</h2>
-  <ul>
-    <li>Inicio</li>
-    <li>Registros</li>
-    <li>Pendientes</li>
-    <li>Configuración</li>
-  </ul>
-</aside>
-
 <style>
-  /* =========================
-   FUENTE GLOBAL
-   ========================= */
-:global(body) {
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-}
-/* =========================
-   ESTILOS GENERALES
-   ========================= */
-main {
-  padding-bottom: 60px;
-}
-header {
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  :global(body) { font-family: "Segoe UI", sans-serif; margin: 0; background-color: #f5f5f5; }
+  main { padding: 15px; padding-bottom: 80px; }
+
+  /* --- HEADER CORREGIDO --- */
+  .header { height: 120px; width: 100%; position: relative; }
+  
+  .header-top { 
+  display: flex; 
+  align-items: center; 
+  background: #ffffff; 
+  height: 72px; 
+  /* Aumentamos el padding izquierdo a 140px para dar aire después del botón menú */
+  padding: 0 20px 0 140px; 
+  box-sizing: border-box;
+  width: 100%;
+  position: relative;
 }
 
-button {
-  cursor: pointer;
-}
-/* =========================
-   HEADER
-   ========================= */
-header.header {
-  position: relative;
-  width: 100vw;              /* ← pantalla completa REAL */
-  margin-left: calc(50% - 50vw); /* ← rompe el contenedor */
-  margin-right: calc(50% - 50vw);
-  height: 120px;
-}
-/* FRANJA SUPERIOR BLANCA */
-.header-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px 12px 88px; /* espacio para el bloque rojo */
-  background: #ffffff;
-  height: 72px;                /* ⬅️ ALTURA FIJA */
-  box-sizing: border-box;
-}
-/* TEXTO */
- .header-top {
-  display: flex;
-  align-items: flex-start; /* 👈 CLAVE */
-  gap: 14px;
-  padding: 12px 16px;
-  background: #fff;
-}
 .header-info {
   display: flex;
   flex-direction: column;
-  margin-left: 110px; /* Ajustar el margen para que el título quede a la derecha del logo */
-}
-.header-info h1 {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.header-info p {
-  margin: 4px 0 0;
-  font-size: 0.9rem;
-  color: #666;
-}
-/* FRANJA INFERIOR GRIS */
-.header-bottom {
-  height: 48px;
-  background: #3f3f3f;
-  margin-top: 0;           /* ⬅️ asegúrate */
-  position: relative;
-  z-index: 1;
-}
-/* =========================
-   CUADRO ROJO (LOGO)
-   ========================= */
-
-.header-logo {
-  position: absolute;
-  left: 0;
-  top: 0;
-
-  width: 90px;
-  height: 96px;           /* ⬅️ baja dentro de la franja gris */
-
-  background: #b63a3a;
-
-  display: flex;
-  align-items: center;
   justify-content: center;
-
-  z-index: 10;
-}
-/* LOGO INTERNO */
-.logo-text {
-  color: white;
-  font-weight: 400;        /* ⬅️ más grueso (clave) */
-  font-size: 46px;         /* puedes subir/bajar 1–2px si quieres */
-  letter-spacing: 0.6px;  /* ⬅️ hace el AV más “ancho” visualmente */
-  line-height: 1.15;
-}
-/* =========================
-   ACCIONES
-   ========================= */
-
-.acciones {
-  margin: 16px 0;
-  display: flex;
-  gap: 8px;
+  /* Eliminamos márgenes negativos o extraños si los hubiera */
+  margin: 0; 
 }
 
-.acciones button {
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #cfc6f3;
-  background: white;
+  .spacer { flex: 1; } /* Empuja la configuración a la derecha */
+
+  .header-bottom { background: #3f3f3f; height: 48px; }
+
+  .header-logo { 
+    position: absolute; left: 0; top: 0; width: 90px; height: 96px; 
+    background: #b63a3a; display: flex; align-items: center; justify-content: center; z-index: 10; 
+  }
+  .logo-text { color: white; font-size: 46px; font-weight: bold; }
+
+  .header-info h1 {
+  margin: 0;
+  font-size: 1.3rem; /* Un poquito más grande para que destaque */
+  line-height: 1.2;
 }
-
-.acciones button.activo {
-  background: #ede9fb;
-  border-color: #8b7fd6;
-  font-weight: 600;
-}
-
-/* =========================
-   BARRA INFERIOR
-   ========================= */
-
-.barra-inferior {
-  display: flex;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 0;
-  background: #ede7f6;
-  border-top: 1px solid #d1c4e9;
-}
-
-.barra-inferior button {
-  flex: 1;
-  background: none;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.barra-inferior img {
-  width: 24px;
-  height: 24px;
-  filter: grayscale(100%);
-  opacity: 0.7;
-}
-
-.barra-inferior span {
-  font-size: 12px;
+  .header-info p {
+  margin: 0;
+  font-size: 0.85rem;
   color: #666;
 }
 
-/* =========================
-   SIDEBAR
-   ========================= */
+  /* El botón de menú se queda en su sitio, pero el texto ya no lo toca */
+.menu-toggle { 
+  position: absolute; 
+  left: 100px; 
+  top: 22px; 
+  z-index: 20; 
+  background: none; 
+  border: none; 
+  font-size: 26px; 
+  cursor: pointer; 
+}
 
+  .config-button { background: none; border: none; padding: 8px; cursor: pointer; }
+  .icono-config { width: 28px; height: 28px; }
+
+  /* --- RESTO DE ESTILOS --- */
+  .acciones { display: flex; gap: 10px; margin-bottom: 15px; }
+  .acciones button { padding: 8px 15px; border-radius: 20px; border: 1px solid #ccc; background: white; }
+  .acciones button.activo { background: #ede9fb; border-color: #5b4cc4; color: #5b4cc4; font-weight: bold; }
+  
+  .tabla { width: 100%; border-collapse: collapse; background: white; }
+  .tabla th, .tabla td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+  .table-container { overflow-x: auto; }
+
+  .btn-primario { background: #5b4cc4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+  .btn-secundario { background: #f0f0f0; border: 1px solid #ccc; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
+
+  .campo { display: flex; flex-direction: column; margin-bottom: 15px; }
+  .campo label { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
+  .campo input, .campo select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+  .barra-inferior { position: fixed; bottom: 0; width: 100%; display: flex; background: #ede7f6; border-top: 1px solid #d1c4e9; padding: 5px 0; }
+  .barra-inferior button { flex: 1; border: none; background: none; display: flex; flex-direction: column; align-items: center; }
+  .icono-nav { width: 22px; height: 22px; opacity: 0.6; }
+  .barra-inferior button.activo .icono-nav { opacity: 1; }
+  .barra-inferior button.activo span { color: #5b4cc4; font-weight: bold; }
+  .flex-end { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+  .acciones-tabla {
+  display: flex;
+  gap: 8px; /* Esto los separa horizontalmente */
+}
+
+.btn-eliminar {
+  background: #fff5f5;
+  color: #e53e3e;
+  border: 1px solid #feb2b2;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-eliminar:hover {
+  background: #e53e3e;
+  color: white;
+}
+
+.buscador-container {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.input-buscador {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  background-color: white;
+}
+
+.input-buscador:focus {
+  outline: none;
+  border-color: #5b4cc4; /* Color morado de tu app */
+  box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
+}
+
+/* Esto hace que el menú flote sobre todo lo demás */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  width: 240px;
+  width: 280px;
+  height: 100vh; /* Ocupa todo el alto de la pantalla */
+  background-color: white;
+  z-index: 1000; /* Número alto para que esté al frente */
+  box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+/* El fondo oscuro detrás del menú */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
   height: 100vh;
-  background: #e6e6e6;
-  z-index: 10;
-  padding: 1rem;
-  transition: transform 0.25s ease;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999; /* Justo debajo del sidebar */
 }
 
-.sidebar.cerrado {
-  transform: translateX(-100%);
+/* --- ESTILOS PARA EL MENÚ LATERAL --- */
+.menu-items {
+  display: flex;
+  flex-direction: column; /* Alineación vertical */
+  padding: 10px 0;
+  width: 100%;
 }
 
-.sidebar.abierto {
-  transform: translateX(0);
-}
-
-.menu-toggle {
-  position: absolute;
-  top: 14px;
-  left: 90px;   /* ⬅️ CLAVE: se sale del logo */
-  z-index: 20;
-  background: none;
+.menu-items button {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%; 
+  padding: 15px 20px;
   border: none;
-  font-size: 22px;
-}
-
-.icono {
-  width: 34px; /* Tamaño estándar para el ícono */
-  height: 34px;
-  filter: grayscale(100%); /* Si quieres el efecto de escala de grises */
-  opacity: 0.7; /* Ajuste de opacidad */
-}
-.config-button {
   background: none;
-  border: none;
-  position: absolute;
-  right: 16px; /* Mantener el margen desde el borde */
-  top: 30%; /* Centrado vertical en la franja blanca */
-  transform: translateY(-50%);/* Asegura el centrado vertical */
+  text-align: left;
+  font-size: 1.1rem;
+  color: #4a5568;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.barra-inferior button.activo img {
-  filter: none;
-  opacity: 1;
+.menu-items button:hover {
+  background-color: #f7fafc;
 }
 
-.barra-inferior button.activo span {
+.menu-items button.active {
+  background-color: #edf2ff;
   color: #5b4cc4;
-  font-weight: 600;
+  font-weight: bold;
+  border-left: 4px solid #5b4cc4;
 }
 
-.circuitos-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
+.separador {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 10px 20px;
 }
-
-.btn-primario {
-  background: #5b4cc4;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.btn-secundario {
-  background: white;
-  border: 1px solid #bbb;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.tabla-circuitos {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.tabla-circuitos th,
-.tabla-circuitos td {
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-
-.tabla-circuitos th {
-  font-weight: 600;
-  color: #444;
-}
-
-.form-grande {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.campo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.campo label {
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.campo input,
-.campo select {
-  padding: 10px 8px;
-  font-size: 0.95rem;
-  border: none;
-  border-bottom: 1px solid #bbb;
-  background: transparent;
-}
-
-.campo small {
-  font-size: 0.75rem;
-  color: #777;
-}
-
-.acciones-inferiores {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 24px;
-  padding-top: 12px;
-  border-top: 1px solid #ddd;
-}
-
-.header-congregaciones {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-}
-
-.texto-vacio {
-  color: #666;
-  font-style: italic;
-}
-
-.tabla-congregaciones {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.tabla-congregaciones th,
-.tabla-congregaciones td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-
-.tabla-congregaciones th {
-  font-weight: 600;
-  background: #f7f7f7;
-  color: #444;
-  white-space: nowrap;
-}
-
-.tabla-congregaciones td {
-  white-space: nowrap;
-}
-
 </style>
