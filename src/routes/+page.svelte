@@ -1,46 +1,28 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Panel from '../lib/components/Panel.svelte';
+  import Panel from '$lib/components/Panel.svelte';
+  
+  import { vistaActual, menuAbierto, circuitos, congregaciones } from '$lib/stores';
+  import type { Circuito, Congregacion, Vista } from '$lib/types';
 
-  /* ======================
-     TIPOS Y ESTADOS
-  ====================== */
-  type Vista = 'inicio' | 'circuito' | 'congregaciones' | 'visitas' | 'registros' | 'configuracion';
+  import Sidebar from '$lib/components/Sidebar.svelte';
 
-  interface Circuito {
-    nombre: string;
-    idioma: string;
-    pais: string;
-  }
+  import Header from '$lib/components/Header.svelte';
 
-  interface Congregacion {
-    circuito: string;
-    seccion: string;
-    nombre: string;
-    numero: string;
-    ciudad: string;
-    provincia: string;
-    pais: string;
-    idioma: string;
-    diaSemana: string;
-    horaSemana: string;
-    diaFin: string;
-    horaFin: string;
-  }
-
-  let vistaActual: Vista = 'inicio';
-  let menuAbierto = false;
+  import BottomNav from '$lib/components/BottomNav.svelte'; // Nueva importación
 
   /* LÓGICA: INICIO */
   let seccionInicio: 'registros' | 'pendientes' = 'registros';
   const visitasRecientes = [
     { fecha: '2025-12-09', congregacion: 'Congregación Norte' },
-    { fecha: '2025-12-08', congregacion: 'Congregación Sur' }
+    { fecha: '2025-12-08', congregacion: 'Congregación Sur' },
+    { fecha: '2025-12-10', congregacion: 'Congregación Este' },
+    { fecha: '2025-12-11', congregacion: 'Congregación Oeste' },
+    { fecha: '2025-12-12', congregacion: 'Congregación Sureste' }
   ];
   let asuntosPendientes = [{ id: 1, texto: 'Visita pendiente a Congregación Norte' }];
 
-  /* LÓGICA: CIRCUITOS */
-  let circuitos: Circuito[] = [{ nombre: 'HG-06', idioma: 'S', pais: 'Cuba' }];
+/* LÓGICA: CIRCUITOS */
   let creandoCircuito = false;
   let indiceCircuitoEditando: number | null = null;
   let nuevoCircuito: Circuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
@@ -59,27 +41,24 @@
 
   function guardarCircuito() {
     if (!nuevoCircuito.nombre.trim()) return alert('El nombre es obligatorio');
+    
     if (indiceCircuitoEditando === null) {
-      circuitos = [...circuitos, { ...nuevoCircuito }];
+      // Usamos $circuitos para que se guarde en localStorage automáticamente
+      $circuitos = [...$circuitos, { ...nuevoCircuito }];
     } else {
-      circuitos[indiceCircuitoEditando] = { ...nuevoCircuito };
-      circuitos = [...circuitos];
+      $circuitos[indiceCircuitoEditando] = { ...nuevoCircuito };
+      $circuitos = [...$circuitos];
     }
     creandoCircuito = false;
   }
 
   function eliminarCircuito(index: number) {
-    if (confirm('¿Estás seguro de que deseas eliminar este circuito? Se borrará permanentemente.')) {
-      // 1. Filtramos el array de circuitos
-      circuitos = circuitos.filter((_, i) => i !== index);
-      
-      // 2. Opcional: Podrías guardar en localStorage si decides persistir circuitos también
-      // localStorage.setItem('circuitos', JSON.stringify(circuitos));
+    if (confirm('¿Estás seguro de que deseas eliminar este circuito?')) {
+      $circuitos = $circuitos.filter((_, i) => i !== index);
     }
   }
 
   /* LÓGICA: CONGREGACIONES */
-  let congregaciones: Congregacion[] = [];
   let mostrarFormularioCongregacion = false;
   let indiceCongregacionEditando: number | null = null;
   
@@ -93,15 +72,10 @@
 
   let textoBusqueda = ''; // Guardará lo que escribas en el buscador
   // Esta variable se actualizará sola cada vez que cambie 'textoBusqueda' o 'congregaciones'
-  $: congregacionesFiltradas = congregaciones.filter(c => 
-    c.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
-    c.ciudad.toLowerCase().includes(textoBusqueda.toLowerCase())
-  );
-
-  onMount(() => {
-    const guardadas = localStorage.getItem('congregaciones');
-    if (guardadas) congregaciones = JSON.parse(guardadas);
-  });
+  $: congregacionesFiltradas = $congregaciones.filter(c => 
+  c.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
+  c.ciudad.toLowerCase().includes(textoBusqueda.toLowerCase())
+);
 
   function prepararNuevaCongregacion() {
     nuevaCongregacion = { ...moldeCongregacion };
@@ -122,79 +96,32 @@
     }
 
     if (indiceCongregacionEditando === null) {
-      congregaciones = [...congregaciones, { ...nuevaCongregacion }];
+      // Añadir al store usando $
+      $congregaciones = [...$congregaciones, { ...nuevaCongregacion }];
     } else {
-      congregaciones[indiceCongregacionEditando] = { ...nuevaCongregacion };
-      congregaciones = [...congregaciones];
+      // Actualizar el store usando $
+      $congregaciones[indiceCongregacionEditando] = { ...nuevaCongregacion };
+      $congregaciones = [...$congregaciones];
     }
-    localStorage.setItem('congregaciones', JSON.stringify(congregaciones));
     mostrarFormularioCongregacion = false;
+    // ¡Ya no necesitas localStorage.setItem aquí! El store lo hace solo.
   }
 
   function eliminarCongregacion(index: number) {
     if (confirm('¿Estás seguro de que deseas eliminar esta congregación?')) {
-      congregaciones = congregaciones.filter((_, i) => i !== index);
-      localStorage.setItem('congregaciones', JSON.stringify(congregaciones));
+      $congregaciones = $congregaciones.filter((_, i) => i !== index);
     }
   }
 </script>
 
-{#if menuAbierto}
-  <div class="overlay" on:click={() => menuAbierto = false}></div>
-  
-  <nav class="sidebar">
-    <div class="sidebar-header">
-      <h2>Menú</h2>
-      <button class="btn-cerrar" on:click={() => menuAbierto = false}>×</button>
-    </div>
+<Sidebar />
 
-    <div class="menu-items">
-      <button class:active={vistaActual === 'inicio'} on:click={() => { vistaActual = 'inicio'; menuAbierto = false; }}>
-        <span>🏠</span> Inicio
-      </button>
-      
-      <button class:active={vistaActual === 'circuito'} on:click={() => { vistaActual = 'circuito'; menuAbierto = false; }}>
-        <span>🌐</span> Circuito
-      </button>
-      
-      <button class:active={vistaActual === 'congregaciones'} on:click={() => { vistaActual = 'congregaciones'; menuAbierto = false; }}>
-        <span>👥</span> Congregaciones
-      </button>
+<Header />
 
-      <div class="separador"></div>
-
-      <button class:active={vistaActual === 'configuracion'} on:click={() => { vistaActual = 'configuracion'; menuAbierto = false; }}>
-        <span>⚙️</span> Configuración
-      </button>
-    </div>
-  </nav>
-{/if}
-
-<header class="header">
-  <div class="header-top">
-    <button class="menu-toggle" on:click|stopPropagation={() => menuAbierto = true}>
-      ☰
-    </button>
-
-    <div class="header-logo">
-      <div class="logo-text">AV</div>
-    </div>
-
-    <div class="header-info">
-      <h1>Asistente de Visitas</h1>
-      <p>Documenta todas tus visitas</p>
-    </div>
-
-    <div class="spacer"></div>
-
-    <button class="config-button" on:click={() => vistaActual = 'configuracion'}>
-      ⚙️
-    </button>
-  </div>
-</header>
+<BottomNav />
 
 <main>
-  {#if vistaActual === 'inicio'}
+  {#if $vistaActual === 'inicio'}
     <div class="acciones">
       <button class:activo={seccionInicio === 'registros'} on:click={() => seccionInicio = 'registros'}>
         Visitas recientes
@@ -219,30 +146,30 @@
     </Panel>
   {/if}
 
-  {#if vistaActual === 'circuito'}
+  {#if $vistaActual === 'circuito'}
     <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
       {#if !creandoCircuito}
         <div class="flex-end"><button class="btn-primario" on:click={prepararNuevoCircuito}>Nuevo circuito</button></div>
         <table class="tabla">
           <thead><tr><th>Nombre</th><th>Idioma</th><th>País</th><th>Acciones</th></tr></thead>
           <tbody>
-            {#each circuitos as c, i}
+            {#each $circuitos as c, index}
               <tr>
   <td>{c.nombre}</td>
   <td>{c.idioma}</td>
   <td>{c.pais}</td>
   <td>
     <div class="acciones-tabla">
-      <button class="btn-secundario" on:click={() => editarCircuito(c, i)}>
+      <button class="btn-secundario" on:click={() => editarCircuito(c, index)}>
         Editar
       </button>
-      <button class="btn-eliminar" on:click={() => eliminarCircuito(i)}>
+      <button class="btn-eliminar" on:click={() => eliminarCircuito(index)}>
         Eliminar
       </button>
     </div>
   </td>
 </tr>
-            {/each}
+{/each}
           </tbody>
         </table>
       {:else}
@@ -259,7 +186,7 @@
     </Panel>
   {/if}
 
-  {#if vistaActual === 'congregaciones'}
+  {#if $vistaActual === 'congregaciones'}
   <Panel titulo="Congregaciones">
     {#if !mostrarFormularioCongregacion}
       <div class="flex-end">
@@ -338,101 +265,22 @@
   </Panel>
 {/if}
   
-  {#if vistaActual === 'configuracion'}
+  {#if $vistaActual === 'configuracion'}
     <Panel titulo="Configuración">
       <p>Ajustes generales del asistente.</p>
     </Panel>
   {/if}
 </main>
 
-<nav class="barra-inferior">
-  <button class:activo={vistaActual === 'inicio'} on:click={() => vistaActual = 'inicio'}>
-    <img class="icono-nav" src="/icons/inicio.svg" alt="Inicio" />
-    <span class="texto">Inicio</span>
-  </button>
-
-  <button class:activo={vistaActual === 'circuito'} on:click={() => vistaActual = 'circuito'}>
-    <img class="icono-nav" src="/icons/circuitos.svg" alt="Circuito" />
-    <span class="texto">Circuito</span>
-  </button>
-
-  <button class:activo={vistaActual === 'congregaciones'} on:click={() => vistaActual = 'congregaciones'}>
-    <img class="icono-nav" src="/icons/congregaciones.svg" alt="Congregaciones" />
-    <span class="texto">Congregaciones</span>
-  </button>
-
-  <button class:activo={vistaActual === 'visitas'} on:click={() => vistaActual = 'visitas'}>
-    <img class="icono-nav" src="/icons/visitas.svg" alt="Visitas" />
-    <span class="texto">Visitas</span>
-  </button>
-
-  <button class:activo={vistaActual === 'registros'} on:click={() => vistaActual = 'registros'}>
-    <img class="icono-nav" src="/icons/registros.svg" alt="Registros" />
-    <span class="texto">Registros</span>
-  </button>
-</nav>
 
 <style>
   :global(body) { font-family: "Segoe UI", sans-serif; margin: 0; background-color: #f5f5f5; }
   main { padding: 15px; padding-bottom: 80px; }
 
   /* --- HEADER CORREGIDO --- */
-  .header { height: 120px; width: 100%; position: relative; }
-  
-  .header-top { 
-  display: flex; 
-  align-items: center; 
-  background: #ffffff; 
-  height: 72px; 
-  /* Aumentamos el padding izquierdo a 140px para dar aire después del botón menú */
-  padding: 0 20px 0 140px; 
-  box-sizing: border-box;
-  width: 100%;
-  position: relative;
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  /* Eliminamos márgenes negativos o extraños si los hubiera */
-  margin: 0; 
-}
-
-  .spacer { flex: 1; } /* Empuja la configuración a la derecha */
 
   .header-bottom { background: #3f3f3f; height: 48px; }
 
-  .header-logo { 
-    position: absolute; left: 0; top: 0; width: 90px; height: 96px; 
-    background: #b63a3a; display: flex; align-items: center; justify-content: center; z-index: 10; 
-  }
-  .logo-text { color: white; font-size: 46px; font-weight: bold; }
-
-  .header-info h1 {
-  margin: 0;
-  font-size: 1.3rem; /* Un poquito más grande para que destaque */
-  line-height: 1.2;
-}
-  .header-info p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-  /* El botón de menú se queda en su sitio, pero el texto ya no lo toca */
-.menu-toggle { 
-  position: absolute; 
-  left: 100px; 
-  top: 22px; 
-  z-index: 20; 
-  background: none; 
-  border: none; 
-  font-size: 26px; 
-  cursor: pointer; 
-}
-
-  .config-button { background: none; border: none; padding: 8px; cursor: pointer; }
   .icono-config { width: 28px; height: 28px; }
 
   /* --- RESTO DE ESTILOS --- */
@@ -450,11 +298,7 @@
   .campo { display: flex; flex-direction: column; margin-bottom: 15px; }
   .campo label { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
   .campo input, .campo select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-
-  .barra-inferior { position: fixed; bottom: 0; width: 100%; display: flex; background: #ede7f6; border-top: 1px solid #d1c4e9; padding: 5px 0; }
-  .barra-inferior button { flex: 1; border: none; background: none; display: flex; flex-direction: column; align-items: center; }
-  .icono-nav { width: 22px; height: 22px; opacity: 0.6; }
-  .barra-inferior button.activo .icono-nav { opacity: 1; }
+ 
   .barra-inferior button.activo span { color: #5b4cc4; font-weight: bold; }
   .flex-end { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 
@@ -499,40 +343,7 @@
   border-color: #5b4cc4; /* Color morado de tu app */
   box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
 }
-
 /* Esto hace que el menú flote sobre todo lo demás */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
-  height: 100vh; /* Ocupa todo el alto de la pantalla */
-  background-color: white;
-  z-index: 1000; /* Número alto para que esté al frente */
-  box-shadow: 5px 0 15px rgba(0,0,0,0.2);
-  display: flex;
-  flex-direction: column;
-}
-
-/* El fondo oscuro detrás del menú */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999; /* Justo debajo del sidebar */
-}
-
-/* --- ESTILOS PARA EL MENÚ LATERAL --- */
-.menu-items {
-  display: flex;
-  flex-direction: column; /* Alineación vertical */
-  padding: 10px 0;
-  width: 100%;
-}
-
 .menu-items button {
   display: flex;
   align-items: center;
