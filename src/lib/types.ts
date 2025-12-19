@@ -7,16 +7,19 @@ export interface Circuito {
 }
 
 export interface Congregacion {
-    circuito: string;
-    seccion: string;
-    nombre: string;
-    numero: string;
-    ciudad: string;
-    provincia: string;
-    pais: string;
-    idioma: string;
-    diaSemana: string;
-    horaSemana: string;
-    diaFin: string;
-    horaFin: string;
+  circuito: string;
+  seccion: string;
+  sucursal: string;
+  nombre: string;
+  numero: string;
+  ciudad: string;
+  provincia: string;
+  pais: string;
+  idioma: string;
+  esLenguaSeñas: boolean;
+  reunionEntreSemana: string;
+  horaEntreSemana: string;
+  reunionFinSemana: string;
+  horaFinSemana: string;
+  telefono: string;
 }
