@@ -7,7 +7,8 @@
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
   import { jsPDF } from 'jspdf';
-  import 'jspdf-autotable';
+  import autoTable from 'jspdf-autotable';
+  import { visitasStore } from '$lib/stores';
 
   let menuAbiertoId: number | null = null;
  
@@ -22,7 +23,7 @@
   /* LÓGICA: INICIO */
   let seccionInicio: 'registros' | 'pendientes' = 'registros';
   // Esta variable ahora será "reactiva" (se actualiza sola cuando cambias 'visitas')
-  $: visitasRecientes = visitas
+  $: visitasRecientes = $visitasStore
     .slice(-5) // Toma solo las últimas 5 visitas
     .reverse() // Pon la más reciente arriba
     .map(v => ({
@@ -77,6 +78,7 @@
     reunionEntreSemana: '', horaEntreSemana: '',
     reunionFinSemana: '', horaFinSemana: '',
     telefono: ''
+    // Eliminados: idiomaFormulario y enlaceJw
   };
   
   let nuevaCongregacion: Congregacion = { ...moldeCongregacion };
@@ -91,6 +93,7 @@
     nuevaCongregacion = { ...moldeCongregacion };
     indiceCongregacionEditando = null;
     mostrarFormularioCongregacion = true;
+    console.log("Estado de vista:", mostrarFormularioCongregacion);
   }
  
   function editarCongregacion(c: Congregacion, index: number) {
@@ -121,8 +124,8 @@
 
   /* LÓGICA: VISITAS */
   let creandoVisita = false;
+
   // Inicializamos con un array vacío para evitar errores de "undefined"
-  let visitas: any[] = []; 
   
   let nuevaVisita = {
     congregacionId: '',
@@ -131,12 +134,20 @@
     observaciones: ''
   };
 
+  let textoBusquedaVisitas = '';
+
+  // Esta lista se actualizará sola cada vez que escribas o cambien las visitas
+  $: visitasFiltradas = $visitasStore.filter(v => 
+    v.congregacionId.toLowerCase().includes(textoBusquedaVisitas.toLowerCase()) ||
+    v.tipo.toLowerCase().includes(textoBusquedaVisitas.toLowerCase())
+  );
+
   function guardarVisita() {
-    if (!nuevaVisita.congregacionId) return alert('Seleccione una congregación');
+  if (!nuevaVisita.congregacionId) return alert('Seleccione una congregación');
     
     // 1. Guardar la visita
     const visitaGuardada = { ...nuevaVisita, id: Date.now() };
-    visitas = [...visitas, visitaGuardada];
+    $visitasStore = [...$visitasStore, visitaGuardada];
 
     // 2. Si hay observaciones, crear un pendiente automático
     if (nuevaVisita.observaciones.trim() !== '') {
@@ -152,41 +163,66 @@
     nuevaVisita = { congregacionId: '', fecha: new Date().toISOString().split('T')[0], tipo: 'Ordinaria', observaciones: '' };
   }
 
-  function exportarDatos(formato: 'csv' | 'excel' | 'pdf') {
-    if (visitas.length === 0) return alert('No hay datos para exportar');
-
-    const encabezados = ['Fecha', 'Congregacion', 'Tipo', 'Observaciones'];
-    const filas = visitas.map(v => [v.fecha, v.congregacionId, v.tipo, v.observaciones]);
-
-    if (formato === 'pdf') {
-      const doc = new jsPDF();
-      doc.text('Informe Mensual de Visitas', 14, 15);
-      (doc as any).autoTable({
-        head: [encabezados],
-        body: filas,
-        startY: 20,
-      });
-      doc.save(`Informe_Visitas_${new Date().toISOString().slice(0,7)}.pdf`);
-    } 
-    else {
-      // Lógica para CSV y Excel (formato tabular)
-      let contenido = encabezados.join(',') + '\n';
-      filas.forEach(fila => {
-        contenido += fila.map(campo => `"${campo}"`).join(',') + '\n';
-      });
-
-      const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `Informe_Visitas.${formato === 'excel' ? 'xlsx' : 'csv'}`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+  function exportarDatos(formato: 'csv' | 'pdf') {
+  // CORRECCIÓN: Usar $visitasStore en lugar de $visitas
+  if ($visitasStore.length === 0) {
+    return alert('No hay datos registrados para exportar.');
   }
+
+  const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones'];
+  
+  // Mapeamos los datos asegurando que no haya valores nulos
+  const filas = $visitasStore.map(v => [
+    v.fecha || 'N/A', 
+    v.congregacionId || 'N/A', 
+    v.tipo || 'N/A', 
+    v.observaciones || ''
+  ]);
+
+  if (formato === 'pdf') {
+  const doc = new jsPDF();
+  
+  // Título del documento
+  doc.setFontSize(18);
+  doc.text('Informe Mensual de Visitas', 14, 15);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
+
+  // Generar la tabla usando el plugin autoTable correctamente
+  autoTable(doc, {
+    head: [encabezados],
+    body: filas,
+    startY: 25,
+    theme: 'striped', // Filas alternas con color suave
+    headStyles: { 
+        fillColor: [91, 76, 196], // El color morado (#5b4cc4) de tu botón "Registrar"
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+        fillColor: [245, 245, 255] // Un tono lila muy suave para las filas
+    },
+    margin: { top: 20 }
+});
+
+  doc.save(`Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+  
+  else {
+    // GENERACIÓN DE CSV (Mantenemos el punto y coma para compatibilidad)
+    let contenido = encabezados.join(';') + '\n';
+    filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + contenido], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Informe_Visitas.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+}
 </script>
  
 <Sidebar />
@@ -255,185 +291,233 @@
   {/if}
  
   {#if $vistaActual === 'congregaciones'}
-    <Panel titulo="Congregaciones">
-      {#if !mostrarFormularioCongregacion}
-        <div class="flex-end"><button class="btn-primario" on:click={prepararNuevaCongregacion}>➕ Nueva</button></div>
-        <input type="text" placeholder="Buscar..." bind:value={textoBusqueda} class="input-buscador" />
-        <div class="table-container">
-          <table class="tabla-profesional">
-            <thead>
-              <tr>
-                <th>Número</th><th>Nombre</th><th>Ciudad</th><th>Provincia</th><th>País</th>
-                <th>Circuito</th><th>Sección</th><th>Sucursal</th><th>Entre semana</th><th>Fin de semana</th><th class="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each congregacionesFiltradas as c, i}
-                <tr>
-                  <td class="font-mono">{c.numero || '-'}</td>
-                  <td class="font-bold">{c.nombre}</td>
-                  <td>{c.ciudad}</td>
-                  <td>{c.provincia || '-'}</td>
-                  <td>{c.pais}</td>
-                  <td>{c.circuito}</td>
-                  <td class="text-center">{c.seccion || '-'}</td>
-                  <td>{c.sucursal || '-'}</td>
-                  <td class="reunion-cell">{c.reunionEntreSemana || '-'} {c.horaEntreSemana || ''}</td>
-                  <td class="reunion-cell">{c.reunionFinSemana || '-'} {c.horaFinSemana || ''}</td>
-                  <td style="position: relative; overflow: visible;"> 
-  <button class="btn-tabla-accion" on:click|stopPropagation={() => toggleMenu(i)}>
-    ACCIONES
-  </button>
-
-  {#if menuAbiertoId === i}
-    <div class="overlay-invisible" on:click={cerrarMenu}></div>
-    
-    <div class="menu-flotante">
-      <div class="menu-header">{c.nombre}</div>
-      <div class="menu-acciones">
-        <button class="opcion-editar" on:click={() => { editarCongregacion(c, i); cerrarMenu(); }}>
-          ✏️ EDITAR
-        </button>
-        <button class="opcion-eliminar" on:click={() => { eliminarCongregacion(i); cerrarMenu(); }}>
-          ELIMINAR 🗑️
+  <Panel titulo="Congregaciones">
+    {#if !mostrarFormularioCongregacion}
+      <div class="flex-end" style="margin-bottom: 15px;">
+        <button class="btn-primario" on:click={prepararNuevaCongregacion}>
+          ➕ Nueva
         </button>
       </div>
-    </div>
-  {/if}
-</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {:else}
-        <div class="form-grande">
-          <h3>{indiceCongregacionEditando !== null ? 'Editar' : 'Nueva'} Congregación</h3>
-          <div class="fila">
-            <div class="campo">
-              <label>Seleccione el circuito *</label>
-              <select bind:value={nuevaCongregacion.circuito} class="select-estilizado">
-                <option value="" disabled>Seleccione...</option>
-                {#each $circuitos as circ}<option value={circ.nombre}>{circ.nombre}</option>{/each}
-              </select>
-            </div>
-            <div class="campo"><label>Sección del circuito</label><input bind:value={nuevaCongregacion.seccion} placeholder="Ej. A" /></div>
-            <div class="campo"><label>Seleccione la Sucursal</label><input bind:value={nuevaCongregacion.sucursal} placeholder="Sucursal" /></div>
-          </div>
-          <div class="fila">
-            <div class="campo gran-campo"><label>Nombre de Congregación *</label><input bind:value={nuevaCongregacion.nombre} /><small>Solo el nombre, Ej. Lengua de señas</small></div>
-            <div class="campo"><label>Número</label><input bind:value={nuevaCongregacion.numero} /></div>
-            <div class="campo"><label>Ciudad *</label><input bind:value={nuevaCongregacion.ciudad} /></div>
-            <div class="campo"><label>Estado/Provincia</label><input bind:value={nuevaCongregacion.provincia} /></div>
-          </div>
-          <div class="fila-reunion">
-            <div class="campo-reunion">
-              <label>Reunión de entre semana</label>
-              <div class="time-wrapper">
-                <input type="text" bind:value={nuevaCongregacion.reunionEntreSemana} placeholder="Día" />
-                <input type="time" bind:value={nuevaCongregacion.horaEntreSemana} />
-              </div>
-            </div>
-            <div class="campo-reunion">
-              <label>Reunión de fin de semana</label>
-              <div class="time-wrapper">
-                <input type="text" bind:value={nuevaCongregacion.reunionFinSemana} placeholder="Día" />
-                <input type="time" bind:value={nuevaCongregacion.horaFinSemana} />
-              </div>
-            </div>
-          </div>
-          <div class="acciones-inferiores">
-            <button class="btn-secundario" on:click={() => mostrarFormularioCongregacion = false}>Cancelar</button>
-            <button class="btn-primario" on:click={guardarCongregacion}>Guardar</button>
-          </div>
-        </div>
-      {/if}
-    </Panel>
-  {/if}
-
- {#if $vistaActual === 'visitas'}
-    <Panel titulo="Registro de Visitas">
-      {#if !creandoVisita}
-        <div class="flex-end" style="gap: 10px; margin-bottom: 20px;">
-  <div class="grupo-exportar">
-    <select class="select-exportar" on:change={(e) => exportarDatos(e.currentTarget.value)}>
-      <option value="" selected disabled>📥 Exportar informe...</option>
-      <option value="csv">Formato CSV</option>
-      <option value="excel">Formato Excel (.xlsx)</option>
-      <option value="pdf">Formato PDF (.pdf)</option>
-    </select>
-  </div>
-
-  <button class="btn-primario" on:click={() => creandoVisita = true}>
-    📝 Registrar Nueva Visita
-  </button>
-</div>
-
-        <div class="table-container">
-          <table class="tabla-profesional">
-            <thead>
+      
+      <input type="text" placeholder="Buscar..." bind:value={textoBusqueda} class="input-buscador" />
+      
+      <div class="table-container">
+        <table class="tabla-profesional">
+          <thead>
+            <tr>
+              <th>Número</th><th>Nombre</th><th>Ciudad</th><th>Provincia</th><th>País</th>
+              <th>Circuito</th><th>Sección</th><th>Sucursal</th><th>Entre semana</th><th>Fin de semana</th><th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each congregacionesFiltradas as c, i}
               <tr>
-                <th>Fecha</th>
-                <th>Congregación</th>
-                <th>Tipo</th>
-                <th class="text-center">Acciones</th>
+                <td class="font-mono">{c.numero || '-'}</td>
+                <td class="font-bold">{c.nombre}</td>
+                <td>{c.ciudad}</td>
+                <td>{c.provincia || '-'}</td>
+                <td>{c.pais}</td>
+                <td>{c.circuito}</td>
+                <td class="text-center">{c.seccion || '-'}</td>
+                <td>{c.sucursal || '-'}</td>
+                <td class="reunion-cell">{c.reunionEntreSemana || '-'} {c.horaEntreSemana || ''}</td>
+                <td class="reunion-cell">{c.reunionFinSemana || '-'} {c.horaFinSemana || ''}</td>
+                <td style="position: relative; overflow: visible;"> 
+                  <button class="btn-tabla-accion" on:click|stopPropagation={() => toggleMenu(i)}>ACCIONES</button>
+                  {#if menuAbiertoId === i}
+                    <div class="overlay-invisible" on:click={cerrarMenu}></div>
+                    <div class="menu-flotante">
+                      <div class="menu-header">{c.nombre}</div>
+                      <div class="menu-acciones">
+                        <button class="opcion-editar" on:click={() => { editarCongregacion(c, i); cerrarMenu(); }}>✏️ EDITAR</button>
+                        <button class="opcion-eliminar" on:click={() => { eliminarCongregacion(i); cerrarMenu(); }}>ELIMINAR 🗑️</button>
+                      </div>
+                    </div>
+                  {/if}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {#each visitas as v}
-                <tr>
-                  <td class="font-mono">{v.fecha}</td>
-                  <td class="font-bold">{v.congregacionId}</td>
-                  <td>{v.tipo}</td>
-                  <td class="text-center">
-                    <button class="btn-tabla-accion">VER INFORME</button>
-                  </td>
-                </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <div class="form-grande">
+        <h3>{indiceCongregacionEditando !== null ? 'Editar' : 'Nueva'} Congregación</h3>
+        
+        <div class="fila">
+          <div class="campo">
+            <label for="circuito">Seleccione el circuito *</label>
+            <select id="circuito" bind:value={nuevaCongregacion.circuito} class="select-estilizado">
+              <option value="" disabled>Seleccione...</option>
+              {#each $circuitos as circ}<option value={circ.nombre}>{circ.nombre}</option>{/each}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="seccion">Sección del circuito</label>
+            <input id="seccion" bind:value={nuevaCongregacion.seccion} placeholder="Ej. A" />
+          </div>
+          <div class="campo">
+            <label for="sucursal">Seleccione la Sucursal</label>
+            <input id="sucursal" bind:value={nuevaCongregacion.sucursal} placeholder="Sucursal" />
+          </div>
+        </div>
+
+        <div class="fila">
+          <div class="campo gran-campo">
+            <label for="nombre">Nombre de Congregación *</label>
+            <input id="nombre" bind:value={nuevaCongregacion.nombre} />
+            <small>Solo el nombre, Ej. North Spanish</small>
+          </div>
+          <div class="campo">
+            <label for="numero">Número</label>
+            <input id="numero" bind:value={nuevaCongregacion.numero} />
+          </div>
+          <div class="campo">
+            <label for="ciudad">Ciudad *</label>
+            <input id="ciudad" bind:value={nuevaCongregacion.ciudad} />
+          </div>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="provincia">Estado/Provincia</label>
+            <input id="provincia" bind:value={nuevaCongregacion.provincia} />
+          </div>
+          <div class="campo">
+            <label for="pais">País</label>
+            <input id="pais" bind:value={nuevaCongregacion.pais} />
+          </div>
+          <div class="campo">
+            <label for="idioma">Seleccione el idioma</label>
+            <select id="idioma" bind:value={nuevaCongregacion.idioma} class="select-estilizado">
+              <option value="S">Español</option>
+              <option value="E">Inglés</option>
+            </select>
+          </div>
+          <div class="campo" style="flex-direction: row; align-items: center; gap: 10px; padding-top: 25px;">
+            <input type="checkbox" id="ls" bind:checked={nuevaCongregacion.esLenguaSeñas} />
+            <label for="ls">Lengua de señas</label>
+          </div>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="tel">Teléfono</label>
+            <input id="tel" bind:value={nuevaCongregacion.telefono} placeholder="+53..." />
+          </div>
+        </div>
+
+        <div class="fila-reunion">
+          <div class="campo-reunion">
+            <label>Reunión de entre semana</label>
+            <div class="time-wrapper">
+              <input type="text" bind:value={nuevaCongregacion.reunionEntreSemana} placeholder="Día" />
+              <input type="time" bind:value={nuevaCongregacion.horaEntreSemana} />
+            </div>
+          </div>
+          <div class="campo-reunion">
+            <label>Reunión de fin de semana</label>
+            <div class="time-wrapper">
+              <input type="text" bind:value={nuevaCongregacion.reunionFinSemana} placeholder="Día" />
+              <input type="time" bind:value={nuevaCongregacion.horaFinSemana} />
+            </div>
+          </div>
+        </div>
+
+        <div class="acciones-inferiores">
+          <button class="btn-secundario" on:click={() => mostrarFormularioCongregacion = false}>Cancelar</button>
+          <button class="btn-primario" on:click={guardarCongregacion}>Guardar</button>
+        </div>
+      </div>
+    {/if}
+  </Panel>
+{/if}
+
+{#if $vistaActual === 'visitas'}
+  <Panel titulo="Registro de Visitas">
+    {#if !creandoVisita}
+      <div class="flex-end" style="gap: 10px; margin-bottom: 20px;">
+        <div class="grupo-exportar">
+          <select 
+            class="select-exportar" 
+            on:change={(e) => {
+              const v = e.currentTarget.value;
+              if (v === 'csv' || v === 'pdf') exportarDatos(v as 'csv' | 'pdf');
+            }}
+          >
+            <option value="" selected disabled>📥 Exportar informe...</option>
+            <option value="csv">Formato CSV</option>
+            <option value="pdf">Formato PDF (.pdf)</option>
+          </select>
+        </div>
+        <button class="btn-primario" on:click={() => creandoVisita = true}>
+          📝 Registrar Nueva Visita
+        </button>
+      </div> 
+
+      <div class="table-container">
+        <table class="tabla-profesional">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Congregación</th>
+              <th>Tipo</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each visitasFiltradas as v}
+              <tr>
+                <td class="font-mono">{v.fecha}</td>
+                <td class="font-bold">{v.congregacionId}</td>
+                <td>{v.tipo}</td>
+                <td class="text-center">
+                  <button class="btn-tabla-accion">VER INFORME</button>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div> 
+    {:else}
+      <div class="form-grande">
+        <h3>Registrar Nueva Visita</h3>
+        <div class="fila">
+          <div class="campo">
+            <label for="v-cong">Seleccione Congregación *</label>
+            <select id="v-cong" bind:value={nuevaVisita.congregacionId} class="select-estilizado">
+              <option value="">Seleccione...</option>
+              {#each $congregaciones as cong}
+                <option value={cong.nombre}>{cong.nombre}</option>
               {/each}
-            </tbody>
-          </table>
-        </div>
-      {:else}
-        <div class="form-grande">
-          <h3>Detalles de la Visita</h3>
-          <div class="fila">
-            <div class="campo">
-              <label>Congregación *</label>
-              <select bind:value={nuevaVisita.congregacionId} class="select-estilizado">
-                <option value="" disabled>Seleccione...</option>
-                {#each $congregaciones as cong}
-                  <option value={cong.nombre}>{cong.nombre}</option>
-                {/each}
-              </select>
-            </div>
-            <div class="campo">
-              <label>Fecha</label>
-              <input type="date" bind:value={nuevaVisita.fecha} />
-            </div>
+            </select>
           </div>
-          <div class="fila">
-            <div class="campo">
-              <label>Tipo de Visita</label>
-              <select bind:value={nuevaVisita.tipo} class="select-estilizado">
-                <option value="Ordinaria">Ordinaria</option>
-                <option value="Especial">Especial</option>
-                <option value="Reunión con Ancianos">Reunión con Ancianos</option>
-              </select>
-            </div>
-          </div>
-          <div class="campo" style="margin-top: 15px;">
-            <label>Observaciones</label>
-            <textarea bind:value={nuevaVisita.observaciones} placeholder="Notas internas..." 
-              style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ccc;"></textarea>
-          </div>
-          <div class="acciones-inferiores">
-            <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
-            <button class="btn-primario" on:click={guardarVisita}>Guardar</button>
+          <div class="campo">
+            <label for="v-fecha">Fecha *</label>
+            <input type="date" id="v-fecha" bind:value={nuevaVisita.fecha} />
           </div>
         </div>
-      {/if}
-    </Panel>
-  {/if} 
+        <div class="fila">
+          <div class="campo">
+            <label for="v-tipo">Tipo de Visita</label>
+            <select id="v-tipo" bind:value={nuevaVisita.tipo} class="select-estilizado">
+              <option value="Ordinaria">Ordinaria</option>
+              <option value="Especial">Especial</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo" style="margin-top: 15px; display: flex; flex-direction: column;">
+          <label for="v-obs">Observaciones / Pendientes</label>
+          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+        </div>
+        <div class="acciones-inferiores">
+          <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
+          <button class="btn-primario" on:click={guardarVisita}>Guardar Registro</button>
+        </div>
+      </div>
+    {/if}
+  </Panel>
+{/if}
 </main>
  
 <style>
@@ -519,5 +603,38 @@
   .grupo-exportar {
     display: flex;
     align-items: center;
+  }
+
+  .contenedor-buscador-visitas {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .input-con-lupa {
+    position: relative;
+    width: 100%;
+    max-width: 300px; /* Ancho controlado */
+    display: flex;
+    align-items: center;
+  }
+
+  .input-con-lupa svg {
+    position: absolute;
+    left: 12px;
+  }
+
+  .input-con-lupa input {
+    width: 100%;
+    padding: 10px 10px 10px 40px;
+    border: 1px solid #ddd;
+    border-radius: 20px; /* Bordes redondeados modernos */
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  .input-con-lupa input:focus {
+    border-color: #5b4cc4;
+    box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
   }
 </style>
