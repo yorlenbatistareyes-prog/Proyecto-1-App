@@ -23,3 +23,17 @@ export interface Congregacion {
   horaFinSemana: string;
   telefono: string;
 }
+
+// ... (tus interfaces de Circuito y Congregacion se quedan igual)
+
+export interface RegistroVisita {
+  id?: number;
+  congregacionId: string;
+  fecha: string;
+  tipo: string;
+  observaciones: string;
+  analisis: {
+    aspectosPositivos: string;
+    necesidadesPreocupantes: string;
+  };
+}

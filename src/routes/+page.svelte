@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Panel from '$lib/components/Panel.svelte';
   import { vistaActual, circuitos, congregaciones } from '$lib/stores';
-  import type { Circuito, Congregacion, Vista } from '$lib/types';
+  import type { Circuito, Congregacion, RegistroVisita, Vista } from '$lib/types';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
@@ -127,12 +127,16 @@
 
   // Inicializamos con un array vacío para evitar errores de "undefined"
   
-  let nuevaVisita = {
+  let nuevaVisita: RegistroVisita = {
     congregacionId: '',
     fecha: new Date().toISOString().split('T')[0], 
     tipo: 'Ordinaria',
-    observaciones: ''
-  };
+    observaciones: '',
+    analisis: {
+      aspectosPositivos: '',
+      necesidadesPreocupantes: ''
+    }
+  } as RegistroVisita;
 
   let textoBusquedaVisitas = '';
 
@@ -482,6 +486,8 @@
     {:else}
       <div class="form-grande">
         <h3>Registrar Nueva Visita</h3>
+        
+        <div class="seccion-form-bloque">
         <div class="fila">
           <div class="campo">
             <label for="v-cong">Seleccione Congregación *</label>
@@ -506,9 +512,36 @@
             </select>
           </div>
         </div>
-        <div class="campo" style="margin-top: 15px; display: flex; flex-direction: column;">
-          <label for="v-obs">Observaciones / Pendientes</label>
-          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+
+        </div> <hr class="divisor-sec" />
+        <div class="seccion-form-bloque">
+          <div class="subtitulo-form">1. ANÁLISIS DE LA CONGREGACIÓN</div>
+          <p class="instruccion-input">OPINIÓN DE LOS ANCIANOS</p>
+
+          <div class="campo" style="margin-bottom: 15px;">
+            <label for="v-pos">Aspectos positivos que observan:</label>
+            <textarea 
+              id="v-pos" 
+              bind:value={nuevaVisita.analisis.aspectosPositivos} 
+              placeholder="Describa los puntos fuertes..."
+              rows="4"
+            ></textarea>
+          </div>
+
+          <div class="campo">
+            <label for="v-nec">Necesidades que les preocupan:</label>
+            <textarea 
+              id="v-nec" 
+              bind:value={nuevaVisita.analisis.necesidadesPreocupantes} 
+              placeholder="Describa las preocupaciones..."
+              rows="4"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="campo" style="margin-top: 25px;">
+          <label for="v-obs">Notas finales para Pendientes</label>
+          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="2"></textarea>
         </div>
         <div class="acciones-inferiores">
           <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
@@ -579,12 +612,19 @@
   .input-buscador { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
 
   textarea {
-    font-family: inherit;
-    resize: vertical;
-    border-radius: 4px;
-    background: #fafafa;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: white;
   }
 
+  textarea:focus {
+    border-color: #5b4cc4;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
+  }
   .select-exportar {
     padding: 10px;
     border-radius: 6px;
@@ -636,5 +676,34 @@
   .input-con-lupa input:focus {
     border-color: #5b4cc4;
     box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
+  }
+
+  .divisor-sec {
+    border: 0;
+    height: 1px;
+    background: #eee;
+    margin: 30px 0;
+  }
+
+  .subtitulo-form {
+    color: #5b4cc4;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .instruccion-input {
+    font-size: 0.8rem;
+    color: #777;
+    font-weight: bold;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+  }
+
+  .seccion-form-bloque {
+    background: #fafafa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
   }
 </style>
