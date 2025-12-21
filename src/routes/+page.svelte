@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Panel from '$lib/components/Panel.svelte';
   import { vistaActual, circuitos, congregaciones } from '$lib/stores';
-  import type { Circuito, Congregacion, RegistroVisita, Vista } from '$lib/types';
+  import type { Circuito, Congregacion, Vista } from '$lib/types';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
@@ -124,19 +124,35 @@
 
   /* LÓGICA: VISITAS */
   let creandoVisita = false;
-
+  let mostrarPreguntas = false;
+  const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   // Inicializamos con un array vacío para evitar errores de "undefined"
   
-  let nuevaVisita: RegistroVisita = {
+  let nuevaVisita = {
     congregacionId: '',
-    fecha: new Date().toISOString().split('T')[0], 
+    fecha: '',
     tipo: 'Ordinaria',
     observaciones: '',
-    analisis: {
-      aspectosPositivos: '',
-      necesidadesPreocupantes: ''
+    ministerio: {
+      observaciones: '',
+      programa: [] as Array<{ dia: string; hora: string }>
     }
-  } as RegistroVisita;
+  };
+
+  function toggleDiaMinisterio(dia: string) {
+    const programa = nuevaVisita.ministerio.programa;
+    const index = programa.findIndex(p => p.dia === dia);
+    
+    if (index !== -1) {
+      // Si el día ya existe, lo eliminamos
+      nuevaVisita.ministerio.programa = programa.filter(p => p.dia !== dia);
+    } else {
+      // Si no existe, lo añadimos con una hora vacía para evitar errores de compilación
+      nuevaVisita.ministerio.programa = [...programa, { dia: dia, hora: '' }];
+    }
+    // Forzamos a Svelte a actualizar la pantalla
+    nuevaVisita = nuevaVisita; 
+  }
 
   let textoBusquedaVisitas = '';
 
@@ -486,8 +502,6 @@
     {:else}
       <div class="form-grande">
         <h3>Registrar Nueva Visita</h3>
-        
-        <div class="seccion-form-bloque">
         <div class="fila">
           <div class="campo">
             <label for="v-cong">Seleccione Congregación *</label>
@@ -513,35 +527,111 @@
           </div>
         </div>
 
-        </div> <hr class="divisor-sec" />
-        <div class="seccion-form-bloque">
-          <div class="subtitulo-form">1. ANÁLISIS DE LA CONGREGACIÓN</div>
-          <p class="instruccion-input">OPINIÓN DE LOS ANCIANOS</p>
+        <div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; background-color: white;">
+      <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #3182ce; display: inline-block;">
+        2. MINISTERIO CRISTIANO
+      </div>
 
-          <div class="campo" style="margin-bottom: 15px;">
-            <label for="v-pos">Aspectos positivos que observan:</label>
-            <textarea 
-              id="v-pos" 
-              bind:value={nuevaVisita.analisis.aspectosPositivos} 
-              placeholder="Describa los puntos fuertes..."
-              rows="4"
-            ></textarea>
-          </div>
+      <button 
+  type="button" 
+  style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030; transition: all 0.2s ease;"
+  on:click={() => mostrarPreguntas = !mostrarPreguntas}
+  on:mouseover={(e) => e.currentTarget.style.background = '#fed7d7'}
+  on:mouseleave={(e) => e.currentTarget.style.background = '#fff5f5'}
+>
+  {mostrarPreguntas ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+</button>
 
-          <div class="campo">
-            <label for="v-nec">Necesidades que les preocupan:</label>
-            <textarea 
-              id="v-nec" 
-              bind:value={nuevaVisita.analisis.necesidadesPreocupantes} 
-              placeholder="Describa las preocupaciones..."
-              rows="4"
-            ></textarea>
-          </div>
+      {#if mostrarPreguntas}
+  <div style="background: #fff5f5; border-left: 4px solid #e53e3e; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5; color: #2d3748; border-radius: 0 8px 8px 0; box-shadow: inset 0 0 10px rgba(155, 0, 0, 0.05);">
+    
+    <div style="margin-bottom: 15px;">
+      <p><strong style="color: #c53030;">Resultados y Facetas:</strong></p>
+      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
+        <li style="margin-bottom: 5px;">• ¿En qué aspectos del ministerio están teniendo buenos resultados y en cuáles necesitan mejoras?</li>
+        <li style="margin-bottom: 5px;">• ¿Participan los publicadores en diferentes facetas de la predicación?</li>
+        <li style="margin-bottom: 5px;">• ¿Tiene planes la congregación para participar en otras formas (calles, negocios, teléfono, etc.)?</li>
+      </ul>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <p><strong style="color: #c53030;">Sobre los Cursos Bíblicos:</strong></p>
+      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
+        <li style="margin-bottom: 5px;">• ¿El CA ha analizado cómo lograr que se dirijan más cursos bíblicos?</li>
+        <li style="margin-bottom: 5px;">• ¿Los publicadores los ofrecen en toda ocasión apropiada y de manera directa?</li>
+        <li style="margin-bottom: 5px;">• ¿Dan los ancianos y siervos ministeriales buen ejemplo de entusiasmo siendo los primeros en ofrecerlos?</li>
+        <li style="margin-bottom: 5px;">• ¿Brindan los SG ayuda personal y estímulo a quienes lo necesitan?</li>
+      </ul>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <p><strong style="color: #c53030;">Sobre la Predicación de Casa en Casa:</strong></p>
+      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
+        <li style="margin-bottom: 5px;">• ¿Se da prioridad a la predicación de casa en casa? <small style="color: #718096;">(S-147-24.04; Anuncio-2024 03 31)</small></li>
+        <li style="margin-bottom: 5px;">• ¿Qué actitud manifiestan los publicadores? ¿Entusiastas y positivos, o con negatividad/temor?</li>
+        <li style="margin-bottom: 5px;">• ¿Se predica en las horas en que es más probable encontrar a la gente?</li>
+        <li style="margin-bottom: 5px;">• ¿Apoyan regularmente las RSC? ¿Llevan la delantera los nombrados y precursores?</li>
+        <li style="margin-bottom: 5px;">• Si algunos no salen con la congregación, ¿cuál es la razón?</li>
+        <li style="margin-bottom: 5px;">• ¿Se dirigen RSC prácticas y bien preparadas? <small style="color: #718096;">[Km 3/15 4 párrs. 4-7]</small></li>
+      </ul>
+    </div>
+
+    <div>
+      <p><strong style="color: #c53030;">Eficacia y Herramientas:</strong></p>
+      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
+        <li style="margin-bottom: 5px;">• ¿Necesitan ayuda para ser más eficaces en revisitas, conversar o usar herramientas?</li>
+        <li style="margin-bottom: 5px;">• ¿Vuelven a visitar a los que muestran interés en la verdad?</li>
+        <li style="margin-bottom: 5px;">• ¿Se están usando apropiada y eficazmente las publicaciones?</li>
+      </ul>
+    </div>
+
+  </div>
+{/if}
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Análisis y Observaciones:</label>
+        <textarea 
+          style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+          bind:value={nuevaVisita.ministerio.observaciones}
+          placeholder="Escribe aquí el análisis basado en las preguntas anteriores..."
+        ></textarea>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+
+      <div>
+        <label style="font-weight: bold; display: block; margin-bottom: 10px;">Programa Local de Predicación:</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {#each diasSemana as dia}
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f7fafc;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input 
+                  type="checkbox" 
+                  on:change={() => toggleDiaMinisterio(dia)} 
+                  checked={nuevaVisita.ministerio.programa.some(p => p.dia === dia)}
+                />
+                {dia}
+              </label>
+
+              {#each nuevaVisita.ministerio.programa as prog}
+                {#if prog.dia === dia}
+                  <input 
+                    type="text" 
+                    placeholder="Hora"
+                    style="width: 80px; padding: 2px 5px; border: 1px solid #cbd5e0; border-radius: 4px;"
+                    bind:value={prog.hora}
+                  />
+                {/if}
+              {/each}
+            </div>
+          {/each}
         </div>
+      </div>
+    </div>
 
-        <div class="campo" style="margin-top: 25px;">
-          <label for="v-obs">Notas finales para Pendientes</label>
-          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="2"></textarea>
+        <div class="campo" style="margin-top: 15px; display: flex; flex-direction: column;">
+          <label for="v-obs">Observaciones / Pendientes</label>
+          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
         </div>
         <div class="acciones-inferiores">
           <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
@@ -612,19 +702,12 @@
   .input-buscador { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
 
   textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    background: white;
+    font-family: inherit;
+    resize: vertical;
+    border-radius: 4px;
+    background: #fafafa;
   }
 
-  textarea:focus {
-    border-color: #5b4cc4;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
-  }
   .select-exportar {
     padding: 10px;
     border-radius: 6px;
@@ -678,32 +761,31 @@
     box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
   }
 
-  .divisor-sec {
-    border: 0;
-    height: 1px;
-    background: #eee;
-    margin: 30px 0;
+  /* Estilo para que el grid de días se vea bien en móviles */
+  .grid-dias-horarios {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
   }
 
-  .subtitulo-form {
-    color: #5b4cc4;
-    font-weight: bold;
-    font-size: 1.1rem;
-    margin-bottom: 10px;
+  /* Efecto visual cuando pasas el ratón por encima del botón de preguntas */
+  button[type="button"]:hover {
+    background-color: #e2e8f0 !important;
+    transition: background-color 0.2s;
   }
 
-  .instruccion-input {
-    font-size: 0.8rem;
-    color: #777;
-    font-weight: bold;
-    margin-bottom: 15px;
-    letter-spacing: 0.5px;
+  /* Estilo para los inputs de hora */
+  input[type="text"].input-hora-mini {
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: monospace;
+    outline-color: #3182ce;
   }
 
-  .seccion-form-bloque {
-    background: #fafafa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
+  /* Mejora de los labels de los días */
+  label {
+    user-select: none; /* Evita que el texto se sombreado al hacer clic rápido */
   }
 </style>

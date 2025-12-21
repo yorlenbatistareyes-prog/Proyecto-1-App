@@ -24,16 +24,20 @@ export interface Congregacion {
   telefono: string;
 }
 
-// ... (tus interfaces de Circuito y Congregacion se quedan igual)
-
-export interface RegistroVisita {
-  id?: number;
-  congregacionId: string;
-  fecha: string;
-  tipo: string;
-  observaciones: string;
-  analisis: {
-    aspectosPositivos: string;
-    necesidadesPreocupantes: string;
-  };
+export interface ProgramaDia {
+    dia: string;
+    hora: string;
 }
+
+export interface Visita {
+    id?: number;
+    congregacionId: string;
+    fecha: string;
+    tipo: string;
+    observaciones: string; // Observaciones generales
+    ministerio: {
+        observaciones: string; // Observaciones específicas del Ministerio
+        programa: ProgramaDia[];
+    };
+}
+// ... (tus interfaces de Circuito y Congregacion se quedan igual)
