@@ -225,10 +225,6 @@
     },
     ideasDiscursos: {
       puntosClave: '',
-      textosBiblicos: ''
-    },
-    ideasDiscursos: {
-      puntosClave: '',
       textosBiblicos: '',
       sugerenciasAncianos: ''
     },
@@ -244,110 +240,358 @@
     observacionesFinales: ''
   };
 
+  function guardarVisita() {
+    // 1. Validación de seguridad
+    if (!nuevaVisita.congregacionId || !nuevaVisita.fecha) {
+      alert("Por favor, seleccione la congregación y la fecha.");
+      return;
+    }
+
+    const visitaGuardada = { ...nuevaVisita, id: Date.now() };
+    $visitasStore = [...$visitasStore, visitaGuardada];
+
+    if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
+      const nuevoPendiente = {
+        id: Date.now() + 1,
+        texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`
+      };
+      asuntosPendientes = [...asuntosPendientes, nuevoPendiente];
+    }
+
+    generarPDFIndividual(nuevaVisita);
+
+    alert("¡Registro guardado y PDF generado con éxito!");
+    creandoVisita = false;
+    resetearFormulario();
+  }
+
+  function resetearFormulario() {
+    nuevaVisita = {
+      fecha: '',
+      congregacionId: '',
+      tipo: 'Ordinaria',
+      ministerio: { observaciones: '', territorioObs: '', precursoresObs: '', programa: [] },
+      reuniones: { 
+        asistencia: { estudiantes: 0, sacados: 0, inactivos: 0, hijosTestigos: 0, noAsisten: 0 },
+        entreSemana: { tendencia: '', faltan: 0, porcentaje: '' },
+        finSemana: { tendencia: '', faltan: 0, porcentaje: '' },
+        observaciones: ''
+      },
+      pastoreo: { observaciones: '', inactivos: 0, sacados: 0 },
+      crecimiento: { observaciones: '', cursosRegulares: false },
+      superintendenteServicio: { observaciones: '', visitaPeriodica: 'si' },
+      publicaciones: { observaciones: '', inventarioMensual: false, excedente: 'no' },
+      progresoEspiritual: { observaciones: '', habitosEstudio: 'buenos' },
+      cuerpoNombrados: { observaciones: '', unidadCuerpo: 'buena', programaCapacitacion: false },
+      localReunion: { observaciones: '', programaLimpieza: 'si', planSeguridad: false },
+      analisisInactivos: { observaciones: '', planAccion: false },
+      precursoresAnalisis: { observaciones: '', apoyoAncianos: 'si', horarioPractico: true },
+      contabilidad: { observaciones: '', contabilidadEnLinea: 'no', archivosRevisados: false },
+      problemasGraves: { observaciones: '', nivelUrgencia: 'bajo', requiereIntervencionSucursal: false },
+      miscelaneos: { observaciones: '', temasPendientes: false },
+      ideasDiscursos: { puntosClave: '', textosBiblicos: '', sugerenciasAncianos: '' },
+      observacionesReuniones: {
+        vidaMinisterio: { asignacionesS89: '', consejeroAuxiliar: '' },
+        finDeSemana: { estudioAtalaya: '' }
+      },
+      observacionesFinales: ''
+    };
+  }
+
+  function generarPDFIndividual(visita: any) {
+    const doc = new jsPDF();
+    let y = 20;
+
+    // --- ENCABEZADO ESTILO FORMULARIO ---
+    doc.setFillColor(63, 81, 181);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("INFORME DE VISITA DEL SUPERINTENDENTE", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`CONGREGACIÓN: ${visita.congregacionId} | FECHA: ${visita.fecha} | TIPO: ${visita.tipo}`, 14, 22);
+    doc.setTextColor(0, 0, 0);
+    y = 40;
+
+    const crearTablaModulo = (titulo: string, filas: any[][]) => {
+        autoTable(doc, {
+            startY: y,
+            head: [[titulo.toUpperCase(), "RESPUESTA / OBSERVACIONES"]],
+            body: filas,
+            theme: 'striped',
+            headStyles: { fillColor: [63, 81, 181], fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 2 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 } },
+            margin: { left: 14, right: 14 }
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+        if (y > 260) { doc.addPage(); y = 20; }
+    };
+
+    // 1. MINISTERIO
+    crearTablaModulo("1. Ministerio del Campo", [
+        ["Observaciones Territorio", visita.ministerio.territorioObs],
+        ["Observaciones Precursores", visita.ministerio.precursoresObs],
+        ["Observaciones Generales", visita.ministerio.observaciones]
+    ]);
+
+    // 2. REUNIONES (Asistencia completa)
+    crearTablaModulo("2. Reuniones y Asistencia", [
+        ["Estudiantes / Inactivos", `Est: ${visita.reuniones.asistencia.estudiantes} / Inac: ${visita.reuniones.asistencia.inactivos}`],
+        ["Sacados / Hijos de Testigos", `Sac: ${visita.reuniones.asistencia.sacados} / Hijos: ${visita.reuniones.asistencia.hijosTestigos}`],
+        ["Tendencia Entre Semana", `${visita.reuniones.entreSemana.tendencia} (Faltan: ${visita.reuniones.entreSemana.faltan})`],
+        ["Tendencia Fin de Semana", `${visita.reuniones.finSemana.tendencia} (Faltan: ${visita.reuniones.finSemana.faltan})`],
+        ["Observaciones de Reuniones", visita.reuniones.observaciones]
+    ]);
+
+    // 3. PASTOREO
+    crearTablaModulo("3. Pastoreo", [
+        ["Inactivos visitados", visita.pastoreo.inactivos],
+        ["Sacados visitados", visita.pastoreo.sacados],
+        ["Observaciones", visita.pastoreo.observaciones]
+    ]);
+
+    // 4. CRECIMIENTO
+    crearTablaModulo("4. Crecimiento", [
+        ["Cursos Regulares", visita.crecimiento.cursosRegulares ? "Sí" : "No"],
+        ["Observaciones", visita.crecimiento.observaciones]
+    ]);
+
+    // 5. SUPERINTENDENTE DE SERVICIO
+    crearTablaModulo("5. Superintendente de Servicio", [
+        ["Visita Periódica", visita.superintendenteServicio.visitaPeriodica === 'si' ? 'Sí' : 'No'],
+        ["Observaciones", visita.superintendenteServicio.observaciones]
+    ]);
+
+    // 6. PUBLICACIONES
+    crearTablaModulo("6. Publicaciones", [
+        ["Inventario Mensual", visita.publicaciones.inventarioMensual ? "Sí" : "No"],
+        ["Excedente", visita.publicaciones.excedente],
+        ["Observaciones", visita.publicaciones.observaciones]
+    ]);
+
+    // 7. PROGRESO ESPIRITUAL
+    crearTablaModulo("7. Progreso Espiritual", [
+        ["Hábitos de Estudio", visita.progresoEspiritual.habitosEstudio],
+        ["Observaciones", visita.progresoEspiritual.observaciones]
+    ]);
+
+    // 8. CUERPO DE NOMBRADOS
+    crearTablaModulo("8. Cuerpo de Nombrados", [
+        ["Unidad del Cuerpo", visita.cuerpoNombrados.unidadCuerpo],
+        ["Programa de Capacitación", visita.cuerpoNombrados.programaCapacitacion ? "Activo" : "No"],
+        ["Observaciones", visita.cuerpoNombrados.observaciones]
+    ]);
+
+    // 9. LOCAL DE REUNIÓN
+    crearTablaModulo("9. Local de Reunión", [
+        ["Programa de Limpieza", visita.localReunion.programaLimpieza === 'si' ? 'Al día' : 'Revisar'],
+        ["Plan de Seguridad", visita.localReunion.planSeguridad ? "Establecido" : "No"],
+        ["Observaciones", visita.localReunion.observaciones]
+    ]);
+
+    // 10. ANÁLISIS DE INACTIVOS
+    crearTablaModulo("10. Análisis de Inactivos", [
+        ["Plan de Acción", visita.analisisInactivos.planAccion ? "Sí" : "No"],
+        ["Observaciones", visita.analisisInactivos.observaciones]
+    ]);
+
+    // 11. PRECURSORES
+    crearTablaModulo("11. Análisis de Precursores", [
+        ["Apoyo de los Ancianos", visita.precursoresAnalisis.apoyoAncianos === 'si' ? 'Sí' : 'No'],
+        ["Horario Práctico", visita.precursoresAnalisis.horarioPractico ? "Sí" : "No"],
+        ["Observaciones", visita.precursoresAnalisis.observaciones]
+    ]);
+
+    // 12. CONTABILIDAD
+    crearTablaModulo("12. Contabilidad", [
+        ["Contabilidad en Línea", visita.contabilidad.contabilidadEnLinea === 'si' ? 'Sí' : 'No'],
+        ["Archivos Revisados", visita.contabilidad.archivosRevisados ? "Sí" : "No"],
+        ["Observaciones", visita.contabilidad.observaciones]
+    ]);
+
+    // 13. PROBLEMAS GRAVES
+    crearTablaModulo("13. Problemas Graves", [
+        ["Nivel de Urgencia", visita.problemasGraves.nivelUrgencia.toUpperCase()],
+        ["Intervención Sucursal", visita.problemasGraves.requiereIntervencionSucursal ? "REQUERIDA" : "No"],
+        ["Observaciones", visita.problemasGraves.observaciones]
+    ]);
+
+    // 14. INSTRUCCIÓN Y REUNIONES (Vida y Ministerio / Atalaya)
+    crearTablaModulo("14. Instrucción y Reuniones", [
+        ["Puntos Clave Discursos", visita.ideasDiscursos.puntosClave],
+        ["Sugerencias Ancianos", visita.ideasDiscursos.sugerenciasAncianos],
+        ["Vida y Min. (S-89)", visita.observacionesReuniones.vidaMinisterio.asignacionesS89],
+        ["Estudio Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
+    ]);
+
+    // 15. CONCLUSIONES
+    crearTablaModulo("15. Observaciones Finales", [
+        ["Comentarios Finales", visita.observacionesFinales]
+    ]);
+
+    doc.save(`Informe_Visita_${visita.congregacionId}.pdf`);
+}
+
   function toggleDiaMinisterio(dia: string) {
     const programa = nuevaVisita.ministerio.programa;
     const index = programa.findIndex(p => p.dia === dia);
     
     if (index !== -1) {
-      // Si el día ya existe, lo eliminamos
       nuevaVisita.ministerio.programa = programa.filter(p => p.dia !== dia);
     } else {
-      // Si no existe, lo añadimos con una hora vacía para evitar errores de compilación
       nuevaVisita.ministerio.programa = [...programa, { dia: dia, hora: '' }];
     }
-    // Forzamos a Svelte a actualizar la pantalla
     nuevaVisita = nuevaVisita; 
   }
 
   let textoBusquedaVisitas = '';
 
-  // Esta lista se actualizará sola cada vez que escribas o cambien las visitas
-  $: visitasFiltradas = $visitasStore.filter(v => 
-    v.congregacionId.toLowerCase().includes(textoBusquedaVisitas.toLowerCase()) ||
-    v.tipo.toLowerCase().includes(textoBusquedaVisitas.toLowerCase())
-  );
+  /* --- COPIAR DESDE AQUÍ --- */
+  let filtroMes = "Todos";
+  let filtroAnio = "Todos";
+  const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  $: anios = [
+    ...new Set([
+      new Date().getFullYear().toString(), 
+      ...$visitasStore.map(v => new Date(v.fecha + 'T00:00:00').getFullYear().toString())
+    ])
+  ].sort();
 
-  function guardarVisita() {
-  if (!nuevaVisita.congregacionId) return alert('Seleccione una congregación');
+  $: visitasFiltradas = $visitasStore.filter(v => {
+    const coincideTexto = v.congregacionId.toLowerCase().includes(textoBusquedaVisitas.toLowerCase()) || 
+                         v.tipo.toLowerCase().includes(textoBusquedaVisitas.toLowerCase());
     
-    // 1. Guardar la visita
-    const visitaGuardada = { ...nuevaVisita, id: Date.now() };
-    $visitasStore = [...$visitasStore, visitaGuardada];
+    const fechaObj = new Date(v.fecha + 'T00:00:00');
+    const mesVisita = fechaObj.getMonth(); 
+    const coincideMes = filtroMes === "Todos" || meses[mesVisita] === filtroMes;
 
-    // 2. Si hay observaciones, crear un pendiente automático
-    if (nuevaVisita.observaciones.trim() !== '') {
-      const nuevoPendiente = {
-        id: Date.now() + 1,
-        texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observaciones}`
-      };
-      asuntosPendientes = [...asuntosPendientes, nuevoPendiente];
-    }
+    const anioVisita = fechaObj.getFullYear().toString();
+    const coincideAnio = filtroAnio === "Todos" || anioVisita === filtroAnio;
 
-    creandoVisita = false;
-    // Reiniciar formulario
-    nuevaVisita = { congregacionId: '', fecha: new Date().toISOString().split('T')[0], tipo: 'Ordinaria', observaciones: '' };
-  }
+    return coincideTexto && coincideMes && coincideAnio;
+  }).reverse();
+
+  // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
   function exportarDatos(formato: 'csv' | 'pdf') {
-  // CORRECCIÓN: Usar $visitasStore en lugar de $visitas
-  if ($visitasStore.length === 0) {
-    return alert('No hay datos registrados para exportar.');
+    if ($visitasStore.length === 0) {
+      return alert('No hay datos registrados para exportar.');
+    }
+    
+
+    const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
+    
+    const filas = $visitasStore.map(v => [
+      v.fecha || 'N/A', 
+      v.congregacionId || 'N/A', 
+      v.tipo || 'N/A', 
+      v.observacionesFinales || ''
+    ]);
+
+    if (formato === 'pdf') {
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text('Informe Mensual de Visitas', 14, 15);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
+
+      autoTable(doc, {
+        head: [encabezados],
+        body: filas,
+        startY: 25,
+        theme: 'striped',
+        headStyles: { fillColor: [91, 76, 196], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [245, 245, 255] }
+      });
+
+      doc.save(`Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } else {
+      let contenido = encabezados.join(';') + '\n';
+      filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + contenido], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Informe_Visitas.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
-  const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones'];
+  // --- FUNCIONES DE GESTIÓN DE VISITAS ---
   
-  // Mapeamos los datos asegurando que no haya valores nulos
-  const filas = $visitasStore.map(v => [
-    v.fecha || 'N/A', 
-    v.congregacionId || 'N/A', 
-    v.tipo || 'N/A', 
-    v.observaciones || ''
-  ]);
+  function cargarVisitaParaVer(visita: any) {
+    // Rellenamos el formulario con los datos guardados
+    nuevaVisita = JSON.parse(JSON.stringify(visita)); 
+    // Cambiamos a la vista del formulario
+    creandoVisita = true;
+    // Subimos al inicio para ver el reporte
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-  if (formato === 'pdf') {
-  const doc = new jsPDF();
-  
-  // Título del documento
-  doc.setFontSize(18);
-  doc.text('Informe Mensual de Visitas', 14, 15);
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
+  function eliminarVisita(id: number | undefined) {
+    if (!id) {
+      alert("Error: Este registro no posee un identificador válido.");
+      return;
+    }
+    if (confirm("¿Seguro que desea eliminar permanentemente este registro de visita?")) {
+      $visitasStore = $visitasStore.filter(v => v.id !== id);
+    }
+  }
 
-  // Generar la tabla usando el plugin autoTable correctamente
-  autoTable(doc, {
-    head: [encabezados],
-    body: filas,
-    startY: 25,
-    theme: 'striped', // Filas alternas con color suave
-    headStyles: { 
-        fillColor: [91, 76, 196], // El color morado (#5b4cc4) de tu botón "Registrar"
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-    },
-    alternateRowStyles: {
-        fillColor: [245, 245, 255] // Un tono lila muy suave para las filas
-    },
-    margin: { top: 20 }
-});
+  // Variables para el Perfil
+  let nombreSuperintendente = "";
+  let circuitoConfig = "";
 
-  doc.save(`Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-  
-  else {
-    // GENERACIÓN DE CSV (Mantenemos el punto y coma para compatibilidad)
-    let contenido = encabezados.join(';') + '\n';
-    filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + contenido], { type: 'text/csv;charset=utf-8;' });
+  // Función para Exportar TODO (Backup)
+  function exportarBackup() {
+    const backup = {
+      circuitos: $circuitos,
+      congregaciones: $congregaciones,
+      visitas: $visitasStore,
+      perfil: { nombre: nombreSuperintendente, circuito: circuitoConfig }
+    };
+    
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Informe_Visitas.csv`;
+    link.download = `Backup_Sistema_S302_${new Date().toISOString().slice(0,10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
-}
+
+  // Función para Importar Backup
+  function importarBackup(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const archivo = input.files[0];
+    const lector = new FileReader();
+    
+    lector.onload = (e) => {
+      try {
+        const datos = JSON.parse(e.target?.result as string);
+        if (confirm('¿Deseas restaurar esta copia? Los datos actuales serán reemplazados.')) {
+          if (datos.circuitos) $circuitos = datos.circuitos;
+          if (datos.congregaciones) $congregaciones = datos.congregaciones;
+          if (datos.visitas) $visitasStore = datos.visitas;
+          if (datos.perfil) {
+            nombreSuperintendente = datos.perfil.nombre;
+            circuitoConfig = datos.perfil.circuito;
+          }
+          alert('¡Copia de seguridad restaurada con éxito!');
+        }
+      } catch (err) {
+        alert('Error: El archivo no es una copia de seguridad válida.');
+      }
+    };
+    lector.readAsText(archivo);
+  }
 </script>
  
 <Sidebar />
@@ -426,45 +670,42 @@
       
       <input type="text" placeholder="Buscar..." bind:value={textoBusqueda} class="input-buscador" />
       
-      <div class="table-container">
-        <table class="tabla-profesional">
-          <thead>
-            <tr>
-              <th>Número</th><th>Nombre</th><th>Ciudad</th><th>Provincia</th><th>País</th>
-              <th>Circuito</th><th>Sección</th><th>Sucursal</th><th>Entre semana</th><th>Fin de semana</th><th class="text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each congregacionesFiltradas as c, i}
-              <tr>
-                <td class="font-mono">{c.numero || '-'}</td>
-                <td class="font-bold">{c.nombre}</td>
-                <td>{c.ciudad}</td>
-                <td>{c.provincia || '-'}</td>
-                <td>{c.pais}</td>
-                <td>{c.circuito}</td>
-                <td class="text-center">{c.seccion || '-'}</td>
-                <td>{c.sucursal || '-'}</td>
-                <td class="reunion-cell">{c.reunionEntreSemana || '-'} {c.horaEntreSemana || ''}</td>
-                <td class="reunion-cell">{c.reunionFinSemana || '-'} {c.horaFinSemana || ''}</td>
-                <td style="position: relative; overflow: visible;"> 
-                  <button class="btn-tabla-accion" on:click|stopPropagation={() => toggleMenu(i)}>ACCIONES</button>
-                  {#if menuAbiertoId === i}
-                    <div class="overlay-invisible" on:click={cerrarMenu}></div>
-                    <div class="menu-flotante">
-                      <div class="menu-header">{c.nombre}</div>
-                      <div class="menu-acciones">
-                        <button class="opcion-editar" on:click={() => { editarCongregacion(c, i); cerrarMenu(); }}>✏️ EDITAR</button>
-                        <button class="opcion-eliminar" on:click={() => { eliminarCongregacion(i); cerrarMenu(); }}>ELIMINAR 🗑️</button>
-                      </div>
-                    </div>
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
+      <div style="width: 100%; overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+  <table style="width: 100%; min-width: 1000px; border-collapse: collapse; table-layout: fixed;">
+    <thead>
+      <tr style="background-color: #f8fafc;">
+        <th style="width: 80px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Número</th>
+        <th style="width: 150px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Nombre</th>
+        <th style="width: 100px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Ciudad</th>
+        <th style="width: 80px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Prov.</th>
+        <th style="width: 80px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">País</th>
+        <th style="width: 80px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Circuito</th>
+        <th style="width: 100px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Sucursal</th>
+        <th style="width: 120px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Entre semana</th>
+        <th style="width: 120px; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Fin de semana</th>
+        <th style="width: 100px; padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; color: #64748b;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each congregacionesFiltradas as c, i}
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px; font-size: 0.85rem;">{c.numero}</td>
+          <td style="padding: 10px; font-size: 0.85rem; font-weight: bold;">{c.nombre}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.ciudad}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.provincia}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.pais}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.circuito}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.sucursal}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.reunionEntreSemana} {c.horaEntreSemana}</td>
+          <td style="padding: 10px; font-size: 0.85rem;">{c.reunionFinSemana} {c.horaFinSemana}</td>
+          <td style="padding: 10px; text-align: center;">
+            <button class="btn-tabla-accion" on:click={() => editarCongregacion(c, i)}>ACCIONES</button>
+          </td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+</div>
     {:else}
       <div class="form-grande">
         <h3>{indiceCongregacionEditando !== null ? 'Editar' : 'Nueva'} Congregación</h3>
@@ -580,27 +821,72 @@
         </button>
       </div> 
 
-      <div class="table-container">
-        <table class="tabla-profesional">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Congregación</th>
-              <th>Tipo</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <input 
+          type="text" 
+          placeholder="🔎 Buscar congregación..." 
+          bind:value={textoBusquedaVisitas}
+          style="flex: 2; min-width: 180px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;"
+        />
+
+        <select bind:value={filtroMes} style="flex: 1; min-width: 130px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; cursor: pointer;">
+          <option value="Todos">📅 Mes: Todos</option>
+          {#each meses as mes}
+            <option value={mes}>{mes}</option>
+          {/each}
+        </select>
+
+        <select bind:value={filtroAnio} style="flex: 1; min-width: 110px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; cursor: pointer;">
+          <option value="Todos">🗓️ Año: Todos</option>
+          {#each anios as anio}
+            <option value={anio}>{anio}</option>
+          {/each}
+        </select>
+
+        <button 
+          on:click={() => { filtroMes = "Todos"; filtroAnio = "Todos"; textoBusquedaVisitas = ""; }}
+          style="padding: 8px 12px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; color: #475569; font-weight: bold;"
+        >
+          RESET ❌
+        </button>
+      </div>
+
+      <div style="width: 100%; background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+  <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+    <thead>
+      <tr style="background-color: #f8fafc;">
+        <th style="width: 20%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Fecha</th>
+        <th style="width: 40%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Congregación</th>
+        <th style="width: 15%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Tipo</th>
+        <th style="width: 25%; padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
             {#each visitasFiltradas as v}
-              <tr>
-                <td class="font-mono">{v.fecha}</td>
-                <td class="font-bold">{v.congregacionId}</td>
-                <td>{v.tipo}</td>
-                <td class="text-center">
-                  <button class="btn-tabla-accion">VER INFORME</button>
-                </td>
-              </tr>
-            {/each}
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 12px; font-family: monospace; font-size: 0.9rem;">{v.fecha}</td>
+          <td style="padding: 10px 12px; font-weight: bold; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{v.congregacionId}</td>
+          <td style="padding: 10px 12px; font-size: 0.9rem;">{v.tipo}</td>
+          <td style="padding: 10px 12px;">
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button 
+                class="btn-tabla-accion" 
+                style="padding: 4px 6px; cursor: pointer; border: 1px solid #d1d5db; background: white; border-radius: 4px; font-size: 0.75rem; font-weight: bold; white-space: nowrap;"
+                on:click={() => cargarVisitaParaVer(v)}
+              >
+                VER INFORME
+              </button>
+              <button 
+                type="button"
+                style="padding: 4px 6px; cursor: pointer; background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; font-size: 0.75rem; white-space: nowrap;"
+                on:click={() => eliminarVisita(v.id)}
+              >
+                ELIMINAR
+              </button>
+            </div>
+          </td>
+        </tr>
+      {/each}
           </tbody>
         </table>
       </div> 
