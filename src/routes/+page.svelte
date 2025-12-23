@@ -127,16 +127,121 @@
   let mostrarPreguntas = false;
   const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   // Inicializamos con un array vacío para evitar errores de "undefined"
+  let mostrarPreguntasTerritorio = false;
+  let mostrarPreguntasPrecursores = false;
+  let mostrarPreguntasReuniones = false;
+  let mostrarPreguntasPastoreo = false;
+  let mostrarPreguntasCrecimiento = false;
+  let mostrarPreguntasSuperServicio = false;
+  let mostrarPreguntasPublicaciones = false;
+  let mostrarPreguntasProgreso = false;
+  let mostrarPreguntasAncianos = false;
+  let mostrarPreguntasLocal = false;
+  let mostrarPreguntasInactivos = false;
+  let mostrarPreguntasDetallePrecursores = false;
+  let mostrarPreguntasContabilidad = false;
+  let mostrarPreguntasProblemas = false;
+  let mostrarPreguntasMiscelaneos = false;
+  let mostrarPreguntasDiscursos = false;
+  let mostrarSugerenciasReuniones = false;
   
+
   let nuevaVisita = {
-    congregacionId: '',
     fecha: '',
+    congregacionId: '',
     tipo: 'Ordinaria',
-    observaciones: '',
     ministerio: {
       observaciones: '',
+      territorioObs: '',
+      precursoresObs: '',
       programa: [] as Array<{ dia: string; hora: string }>
-    }
+    },
+    reuniones: {
+      asistencia: {
+        estudiantes: 0,
+        sacados: 0,
+        inactivos: 0,
+        hijosTestigos: 0,
+        noAsisten: 0
+      },
+      entreSemana: { tendencia: '', faltan: 0, porcentaje: '' },
+      finSemana: { tendencia: '', faltan: 0, porcentaje: '' },
+      observaciones: ''
+    },
+    pastoreo: {
+      observaciones: '',
+      inactivos: 0,
+      sacados: 0
+    },
+    crecimiento: {
+      observaciones: '',
+      cursosRegulares: false // Añadimos un selector para esta pregunta específica
+    },
+    superintendenteServicio: {
+      observaciones: '',
+      visitaPeriodica: 'si'
+    },
+    publicaciones: {
+      observaciones: '',
+      inventarioMensual: false,
+      excedente: 'no'
+    },
+    progresoEspiritual: {
+      observaciones: '',
+      habitosEstudio: 'buenos'
+    },
+    cuerpoNombrados: {
+      observaciones: '',
+      unidadCuerpo: 'buena',
+      programaCapacitacion: false
+    },
+    localReunion: {
+      observaciones: '',
+      programaLimpieza: 'si',
+      planSeguridad: false
+    },
+    analisisInactivos: {
+      observaciones: '',
+      planAccion: false
+    },
+    precursoresAnalisis: {
+      observaciones: '',
+      apoyoAncianos: 'si',
+      horarioPractico: true
+    },
+    contabilidad: {
+      observaciones: '',
+      contabilidadEnLinea: 'no',
+      archivosRevisados: false
+    },
+    problemasGraves: {
+      observaciones: '',
+      nivelUrgencia: 'bajo',
+      requiereIntervencionSucursal: false
+    },
+    miscelaneos: {
+      observaciones: '',
+      temasPendientes: false
+    },
+    ideasDiscursos: {
+      puntosClave: '',
+      textosBiblicos: ''
+    },
+    ideasDiscursos: {
+      puntosClave: '',
+      textosBiblicos: '',
+      sugerenciasAncianos: ''
+    },
+    observacionesReuniones: {
+      vidaMinisterio: {
+        asignacionesS89: '',
+        consejeroAuxiliar: ''
+      },
+      finDeSemana: {
+        estudioAtalaya: ''
+      }
+    },
+    observacionesFinales: ''
   };
 
   function toggleDiaMinisterio(dia: string) {
@@ -499,9 +604,11 @@
           </tbody>
         </table>
       </div> 
+      
     {:else}
       <div class="form-grande">
         <h3>Registrar Nueva Visita</h3>
+        
         <div class="fila">
           <div class="campo">
             <label for="v-cong">Seleccione Congregación *</label>
@@ -517,6 +624,7 @@
             <input type="date" id="v-fecha" bind:value={nuevaVisita.fecha} />
           </div>
         </div>
+
         <div class="fila">
           <div class="campo">
             <label for="v-tipo">Tipo de Visita</label>
@@ -528,116 +636,983 @@
         </div>
 
         <div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; background-color: white;">
-      <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #3182ce; display: inline-block;">
-        2. MINISTERIO CRISTIANO
+          <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; display: inline-block;">
+            1. MINISTERIO CRISTIANO
+          </div>
+
+          <button 
+            type="button" 
+            style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030;"
+            on:click={() => mostrarPreguntas = !mostrarPreguntas}
+          >
+            {mostrarPreguntas ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+          </button>
+
+          {#if mostrarPreguntas}
+            <div style="background: #fff5f5; border-left: 4px solid #e53e3e; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5; color: #2d3748; border-radius: 0 8px 8px 0;">
+              
+              <div style="margin-bottom: 15px;">
+                <p><strong style="color: #c53030;">Resultados y Facetas:</strong></p>
+                <ul style="padding-left: 20px; margin: 5px 0; list-style-type: disc;">
+                  <li>¿En qué aspectos del ministerio están teniendo buenos resultados y en cuáles necesitan mejoras?</li>
+                  <li>¿Participan los publicadores en diferentes facetas de la predicación?</li>
+                  <li>¿Tiene planes la congregación para participar en otras formas (calles, negocios, teléfono, etc.)?</li>
+                </ul>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <p><strong style="color: #c53030;">Sobre los Cursos Bíblicos:</strong></p>
+                <ul style="padding-left: 20px; margin: 5px 0; list-style-type: disc;">
+                  <li>¿El CA ha analizado cómo lograr que se dirijan más cursos bíblicos?</li>
+                  <li>¿Los publicadores los ofrecen en toda ocasión apropiada y de manera directa?</li>
+                  <li>¿Dan los ancianos y siervos ministeriales buen ejemplo de entusiasmo?</li>
+                  <li>¿Brindan los SG ayuda personal y estímulo a quienes lo necesitan?</li>
+                </ul>
+              </div>
+
+              <div style="margin-bottom: 15px;">
+                <p><strong style="color: #c53030;">Sobre la Predicación de Casa en Casa:</strong></p>
+                <ul style="padding-left: 20px; margin: 5px 0; list-style-type: disc;">
+                  <li>¿Se da prioridad a la predicación de casa en casa? <small>(S-147-24.04)</small></li>
+                  <li>¿Qué actitud manifiestan los publicadores? ¿Entusiastas o con temor?</li>
+                  <li>¿Se predica en las horas en que es más probable encontrar a la gente?</li>
+                  <li>¿Se dirigen RSC prácticas y bien preparadas? <small>[Km 3/15 4 párrs. 4-7]</small></li>
+                </ul>
+              </div>
+
+              <div>
+                <p><strong style="color: #c53030;">Eficacia y Herramientas:</strong></p>
+                <ul style="padding-left: 20px; margin: 5px 0; list-style-type: disc;">
+                  <li>¿Necesitan ayuda para ser más eficaces en revisitas o usar herramientas?</li>
+                  <li>¿Vuelven a visitar a los que muestran interés en la verdad?</li>
+                  <li>¿Se están usando apropiada y eficazmente las publicaciones?</li>
+                </ul>
+              </div>
+
+            </div>
+          {/if}
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Análisis de Actividad:</label>
+            <textarea 
+              style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+              bind:value={nuevaVisita.ministerio.observaciones}
+              placeholder="Escribe aquí el análisis basado en las preguntas anteriores..."
+            ></textarea>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+
+          <label style="font-weight: bold; display: block; margin-bottom: 10px;">Programa de Predicación:</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {#each diasSemana as dia}
+              {@const programaDia = nuevaVisita.ministerio.programa.find(p => p.dia === dia)}
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; border: 1px solid {programaDia ? '#3182ce' : '#e2e8f0'}; border-radius: 8px; background: {programaDia ? '#f0f7ff' : '#ffffff'}; min-width: 90px; flex: 1;">
+                <label style="display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #4a5568;">
+                  <input type="checkbox" on:change={() => toggleDiaMinisterio(dia)} checked={!!programaDia} />
+                  {dia.substring(0, 3)}. 
+                </label>
+                {#if programaDia}
+                  <input type="text" placeholder="00:00" style="width: 65px; padding: 4px; text-align: center; border: 1px solid #3182ce; border-radius: 4px; font-size: 0.8rem;" bind:value={programaDia.hora} />
+                {:else}
+                  <div style="height: 26px;"></div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #2d3748; font-size: 0.95rem; text-transform: uppercase;">
+              Atención al Territorio (Rom. 15:23a)
+            </div>
+            <button 
+              type="button" 
+              style="padding: 4px 10px; font-size: 0.75rem; background: #ebf8ff; border: 1px solid #90cdf4; color: #2b6cb0; border-radius: 4px; cursor: pointer; font-weight: bold;"
+              on:click={() => mostrarPreguntasTerritorio = !mostrarPreguntasTerritorio}
+            >
+              {mostrarPreguntasTerritorio ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+            </button>
+          </div>
+
+          {#if mostrarPreguntasTerritorio}
+            <div style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 15px; margin-bottom: 15px; font-size: 0.9rem; color: #2c5282; border-radius: 0 4px 4px 0;">
+              <ul style="padding-left: 15px; margin: 0; list-style-type: disc;">
+                <li>¿Se están predicando los territorios de manera completa? (Frecuencia y cabalidad).</li>
+                <li>¿Se están trabajando los NC antes de dar por terminado un territorio?</li>
+                <li>¿Tiene la congregación un mapa grande de toda la zona claramente marcado? <small>(sfg-S 3)</small>.</li>
+              </ul>
+            </div>
+          {/if}
+          <textarea style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 80px;" bind:value={nuevaVisita.ministerio.territorioObs} placeholder="Análisis sobre la cobertura del territorio..."></textarea>
+        </div>
+
+        <div style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 15px; background-color: #fffaf0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #2d3748; font-size: 0.95rem; text-transform: uppercase;">
+              Servicio de Precursor (Regular y Auxiliar)
+            </div>
+            <button 
+              type="button" 
+              style="padding: 4px 10px; font-size: 0.75rem; background: #fffaf0; border: 1px solid #fbd38d; color: #9c4221; border-radius: 4px; cursor: pointer; font-weight: bold;"
+              on:click={() => mostrarPreguntasPrecursores = !mostrarPreguntasPrecursores}
+            >
+              {mostrarPreguntasPrecursores ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+            </button>
+          </div>
+
+          {#if mostrarPreguntasPrecursores}
+            <div style="background: #feebc8; border-left: 4px solid #ed8936; padding: 15px; margin-bottom: 15px; font-size: 0.9rem; color: #7b341e; border-radius: 0 4px 4px 0;">
+              <ul style="padding-left: 15px; margin: 0; list-style-type: disc;">
+                <li>¿Qué actitud manifiestan los hermanos respecto al servicio de precursor?</li>
+                <li>¿Están animando a quiénes tienen potencial para que sirvan como precursores?</li>
+                <li>¿Los nombrados y sus familias están dando un buen ejemplo? <small>(Heb. 13:17)</small>.</li>
+              </ul>
+            </div>
+          {/if}
+          <textarea style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 80px;" bind:value={nuevaVisita.ministerio.precursoresObs} placeholder="Situación y ánimo de los precursores..."></textarea>
+        </div> 
+
+        <div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem;">
+    2. REUNIONES DE CONGREGACIÓN
+  </div>
+
+  <div style="background-color: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+    <p style="font-weight: bold; font-size: 0.9rem; margin-bottom: 10px; color: #475569; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px;">
+      Registro de Asistencia (S-88)
+    </p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+      <div class="campo-mini">
+        <label>Estudiantes:</label>
+        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.estudiantes} />
+      </div>
+      <div class="campo-mini">
+        <label>Sacados:</label>
+        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.sacados} />
+      </div>
+      <div class="campo-mini">
+        <label>Inactivos:</label>
+        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.inactivos} />
+      </div>
+      <div class="campo-mini">
+        <label>Hijos Testigos:</label>
+        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.hijosTestigos} />
+      </div>
+      <div class="campo-mini">
+        <label>No pueden asistir:</label>
+        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.noAsisten} />
+      </div>
+    </div>
+
+    <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0;">
+        <span style="font-weight: bold; font-size: 0.8rem; display: block; margin-bottom: 8px;">ENTRE SEMANA (Promedio)</span>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" placeholder="Aum/Dism" bind:value={nuevaVisita.reuniones.entreSemana.tendencia} style="flex: 2;" />
+          <input type="number" placeholder="Faltan" bind:value={nuevaVisita.reuniones.entreSemana.faltan} style="flex: 1;" />
+          <input type="text" placeholder="%" bind:value={nuevaVisita.reuniones.entreSemana.porcentaje} style="flex: 1;" />
+        </div>
+      </div>
+      <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0;">
+        <span style="font-weight: bold; font-size: 0.8rem; display: block; margin-bottom: 8px;">FIN DE SEMANA (Promedio)</span>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" placeholder="Aum/Dism" bind:value={nuevaVisita.reuniones.finSemana.tendencia} style="flex: 2;" />
+          <input type="number" placeholder="Faltan" bind:value={nuevaVisita.reuniones.finSemana.faltan} style="flex: 1;" />
+          <input type="text" placeholder="%" bind:value={nuevaVisita.reuniones.finSemana.porcentaje} style="flex: 1;" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2b6cb0;"
+    on:click={() => mostrarPreguntasReuniones = !mostrarPreguntasReuniones}
+  >
+    {mostrarPreguntasReuniones ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+  </button>
+
+  {#if mostrarPreguntasReuniones}
+    <div style="background: #ebf8ff; border-left: 4px solid #3182ce; padding: 20px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.6; color: #2c5282; border-radius: 0 8px 8px 0;">
+      
+      <div style="margin-bottom: 15px;">
+        <p><strong>Asistencia y Factores de Aumento:</strong></p>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Qué retos están superando los hermanos para asistir?</li>
+          <li>Si hubo aumento, ¿qué ha contribuido?</li>
+          <li>¿El aumento se debe al esfuerzo de los hermanos o al número de estudiantes y otros que asisten?</li>
+        </ul>
       </div>
 
-      <button 
-  type="button" 
-  style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030; transition: all 0.2s ease;"
-  on:click={() => mostrarPreguntas = !mostrarPreguntas}
-  on:mouseover={(e) => e.currentTarget.style.background = '#fed7d7'}
-  on:mouseleave={(e) => e.currentTarget.style.background = '#fff5f5'}
->
-  {mostrarPreguntas ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
-</button>
+      <div style="margin-bottom: 15px;">
+        <p><strong>Causas de Disminución o Inasistencia:</strong></p>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Cuáles son las causas de la disminución? ¿Viajan mucho los hermanos?</li>
+          <li>¿Es la enseñanza de calidad? ¿Son los horarios convenientes?</li>
+          <li>¿Quiénes se están perdiendo las reuniones y por qué?</li>
+          <li>¿Qué medidas toma el CA por los que no pueden asistir (mayores, salud, etc.)?</li>
+          <li>¿Qué hacen los ancianos para ayudar a quienes faltan?</li>
+          <li>Zonas rurales: ¿Se pueden organizar reuniones como sección en algún poblado?</li>
+        </ul>
+      </div>
 
-      {#if mostrarPreguntas}
-  <div style="background: #fff5f5; border-left: 4px solid #e53e3e; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5; color: #2d3748; border-radius: 0 8px 8px 0; box-shadow: inset 0 0 10px rgba(155, 0, 0, 0.05);">
+      <div>
+        <p><strong>Sobre la Enseñanza:</strong></p>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Se presentan con calidad los discursos y otras asignaciones?</li>
+          <li>¿Necesitan ayuda los hermanos para mejorar su oratoria?</li>
+          <li>¿Están los ancianos capacitando a los SM para enseñar en público?</li>
+          <li>Programa de discursos públicos: ¿Mejoras sugeridas? ¿Se invita a oradores?</li>
+          <li>¿Los oradores son mayormente de la congregación o invitados?</li>
+          <li>Participación: ¿Los comentarios reflejan buena preparación?</li>
+        </ul>
+      </div>
+    </div>
+  {/if}
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de las Reuniones y Enseñanza:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 150px;"
+      bind:value={nuevaVisita.reuniones.observaciones}
+      placeholder="Redacte aquí las observaciones..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem;">
+    3. PASTOREO
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2f855a;"
+    on:click={() => mostrarPreguntasPastoreo = !mostrarPreguntasPastoreo}
+  >
+    {mostrarPreguntasPastoreo ? 'OCULTAR PREGUNTAS DE PASTOREO ▲' : 'VER PREGUNTAS DE PASTOREO ▼'}
+  </button>
+
+  {#if mostrarPreguntasPastoreo}
+    <div style="background: #f0fff4; border-left: 4px solid #38a169; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #22543d; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Es patente que los publicadores reciben visitas de pastoreo periódicas? ¿Son eficaces tales visitas?</li>
+        <li>¿Hay inactivos en la congregación? ¿Qué han hecho los ancianos para ayudarlos a regresar?</li>
+        <li>¿Cuántos han sido sacados de la congregación y cuáles han sido las razones?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+    <div style="flex: 1;">
+      <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Inactivos en la congregación:</label>
+      <input 
+        type="number" 
+        style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;" 
+        bind:value={nuevaVisita.pastoreo.inactivos} 
+      />
+    </div>
+    <div style="flex: 1;">
+      <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Cantidad de sacados:</label>
+      <input 
+        type="number" 
+        style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;" 
+        bind:value={nuevaVisita.pastoreo.sacados} 
+      />
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Pastoreo y Ayuda Espiritual:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+      bind:value={nuevaVisita.pastoreo.observaciones}
+      placeholder="Redacte aquí el análisis sobre la eficacia del pastoreo y las razones de las bajas..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem;">
+    4. CRECIMIENTO DE LA CONGREGACIÓN
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #fff5f7; border: 1px solid #fed7e2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #b83280;"
+    on:click={() => mostrarPreguntasCrecimiento = !mostrarPreguntasCrecimiento}
+  >
+    {mostrarPreguntasCrecimiento ? 'OCULTAR PREGUNTAS DE CRECIMIENTO ▲' : 'VER PREGUNTAS DE CRECIMIENTO ▼'}
+  </button>
+
+  {#if mostrarPreguntasCrecimiento}
+    <div style="background: #fff5f7; border-left: 4px solid #d53f8c; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #702459; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Están progresando espiritualmente los estudiantes? ¿Qué ha contribuido a su progreso?</li>
+        <li>Si algunos no progresan, ¿qué está frenando su avance?</li>
+        <li>¿Se dirigen regularmente los cursos bíblicos?</li>
+        <li>¿Usan los hermanos las herramientas recomendadas de manera hábil y eficaz?</li>
+        <li>¿Invitan semanalmente a los estudiantes a las reuniones?</li>
+        <li>¿Los ancianos acompañan a los hermanos a dirigir sus cursos, les ayudan y les dan ánimo?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #fdf2f8; padding: 10px; border-radius: 6px;">
+    <label style="font-size: 0.9rem; font-weight: bold; color: #b83280;">¿Se dirigen regularmente los cursos bíblicos?</label>
+    <select bind:value={nuevaVisita.crecimiento.cursosRegulares} style="padding: 4px; border-radius: 4px; border: 1px solid #fed7e2;">
+        <option value={true}>Sí</option>
+        <option value={false}>No / Algunos</option>
+    </select>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Crecimiento y Estudiantes:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
+      bind:value={nuevaVisita.crecimiento.observaciones}
+      placeholder="Redacte aquí el progreso de los estudiantes, el uso de herramientas y el apoyo de los ancianos..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #ed8936; display: inline-block;">
+    5. SUPERINTENDENTE DE SERVICIO (sfg-S 1; od-S 5:28)
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #fffaf0; border: 1px solid #fbd38d; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9c4221;"
+    on:click={() => mostrarPreguntasSuperServicio = !mostrarPreguntasSuperServicio}
+  >
+    {mostrarPreguntasSuperServicio ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
+  </button>
+
+  {#if mostrarPreguntasSuperServicio}
+    <div style="background: #fffaf0; border-left: 4px solid #ed8936; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #7b341e; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Visita periódicamente los grupos de servicio al campo?</li>
+        <li>¿Cómo realiza las visitas?</li>
+        <li>¿Colaboran los SG (Siervos de Grupo) para el éxito de sus visitas?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 15px;">
+    <span style="font-size: 0.9rem; font-weight: bold; color: #7b341e;">¿Visitas periódicas?:</span>
+    <div style="display: flex; gap: 10px;">
+        <label><input type="radio" bind:group={nuevaVisita.superintendenteServicio.visitaPeriodica} value="si" /> Sí</label>
+        <label><input type="radio" bind:group={nuevaVisita.superintendenteServicio.visitaPeriodica} value="no" /> No</label>
+        <label><input type="radio" bind:group={nuevaVisita.superintendenteServicio.visitaPeriodica} value="irregular" /> Irregular</label>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre su labor y colaboración de los SG:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+      bind:value={nuevaVisita.superintendenteServicio.observaciones}
+      placeholder="Describa el método de visita y la actitud de los siervos de grupo..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #4a5568; display: inline-block;">
+    6. PUBLICACIONES [S-56; S-147]
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
+    on:click={() => mostrarPreguntasPublicaciones = !mostrarPreguntasPublicaciones}
+  >
+    {mostrarPreguntasPublicaciones ? 'OCULTAR REQUISITOS ▲' : 'VER PREGUNTAS DE EXAMEN ▼'}
+  </button>
+
+  {#if mostrarPreguntasPublicaciones}
+    <div style="background: #edf2f7; border-left: 4px solid #4a5568; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #2d3748; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Tiene la congregación excedente de publicaciones?</li>
+        <li>Las cantidades solicitadas, ¿están en proporción al número de publicadores?</li>
+        <li>¿Están capacitando al siervo de publicaciones para cumplir con su asignación?</li>
+        <li>¿Se realiza cada mes un inventario de las publicaciones en JW Hub?</li>
+        <li>Según el formulario <strong>S-28</strong>, ¿existen controles adecuados para las cantidades que se solicitan?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: #f8fafc; padding: 15px; border-radius: 6px;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #4a5568;">¿Hay excedentes?</span>
+        <select bind:value={nuevaVisita.publicaciones.excedente} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value="no">No</option>
+            <option value="si">Sí (Mencionar en análisis)</option>
+            <option value="poco">Cantidades mínimas</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #4a5568;">Inventario mensual JW Hub:</span>
+        <select bind:value={nuevaVisita.publicaciones.inventarioMensual} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value={true}>Al día</option>
+            <option value={false}>Pendiente / Irregular</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Gestión, Inventarios (S-28) y Capacitación:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+      bind:value={nuevaVisita.publicaciones.observaciones}
+      placeholder="Comente sobre la proporcionalidad de los pedidos y la eficacia del siervo..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #6b46c1; display: inline-block;">
+    7. METAS Y PROGRESO ESPIRITUAL
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #faf5ff; border: 1px solid #e9d8fd; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #6b46c1;"
+    on:click={() => mostrarPreguntasProgreso = !mostrarPreguntasProgreso}
+  >
+    {mostrarPreguntasProgreso ? 'OCULTAR GUÍA DE ANÁLISIS FAMILIAR ▲' : 'VER PREGUNTAS SOBRE PROGRESO ▼'}
+  </button>
+
+  {#if mostrarPreguntasProgreso}
+    <div style="background: #faf5ff; border-left: 4px solid #6b46c1; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #44337a; border-radius: 0 8px 8px 0;">
+      <div style="margin-bottom: 10px;">
+        <strong>Familias y Adoración en Familia:</strong>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Reciben los hijos ayuda para ser publicadores y bautizarse? ¿Cursos regulares con publicaciones recomendadas?</li>
+          <li>¿Tienen buenos hábitos de estudio personal y adoración en familia? ¿Qué ha contribuido al éxito?</li>
+          <li>Si hay dificultades, ¿están ofreciendo ayuda los ancianos?</li>
+        </ul>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <strong>Niños y Jóvenes:</strong>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Saben leer y entender bien lo que leen? ¿Hábitos de estudio?</li>
+          <li>¿Van tras metas espirituales? ¿Reciben ayuda de padres y ancianos?</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Matrimonios y Tendencias:</strong>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Están unidos y trabajan juntos? ¿Dan buen ejemplo?</li>
+          <li>¿Hay alguna tendencia que esté afectando a las familias?</li>
+        </ul>
+      </div>
+    </div>
+  {/if}
+
+  <div style="margin-bottom: 15px; background: #f9f7ff; padding: 12px; border-radius: 6px; border: 1px dashed #d6bcfa;">
+    <label style="font-size: 0.9rem; font-weight: bold; color: #553c9a; display: block; margin-bottom: 8px;">Estado general de hábitos espirituales:</label>
+    <div style="display: flex; gap: 15px;">
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="buenos" /> Buenos / Ejemplares</label>
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="mejorables" /> Necesitan mejora</label>
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="preocupantes" /> Hay tendencias negativas</label>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis detallado sobre Familias, Jóvenes y Matrimonios:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 160px;"
+      bind:value={nuevaVisita.progresoEspiritual.observaciones}
+      placeholder="Redacte aquí sobre la calidad del estudio personal, la unidad de los matrimonios y el progreso de los jóvenes..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #2b6cb0; display: inline-block;">
+    8. CUERPO DE ANCIANOS Y SIERVOS MINISTERIALES
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2b6cb0;"
+    on:click={() => mostrarPreguntasAncianos = !mostrarPreguntasAncianos}
+  >
+    {mostrarPreguntasAncianos ? 'OCULTAR GUÍA DE EVALUACIÓN ▲' : 'VER PREGUNTAS SOBRE LOS NOMBRADOS ▼'}
+  </button>
+
+  {#if mostrarPreguntasAncianos}
+    <div style="background: #ebf8ff; border-left: 4px solid #2b6cb0; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #2a4365; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Llevan la delantera ellos y sus familias en la predicación? ¿Podrían algunos ser precursores?</li>
+        <li>¿Están dando atención al pastoreo periódico?</li>
+        <li>¿Es su enseñanza de calidad y eficaz?</li>
+        <li>¿Existe un ambiente de confianza y cariño entre los nombrados y los demás publicadores?</li>
+        <li>¿Hay unidad en el Cuerpo de Ancianos?</li>
+        <li>¿Tienen un programa de capacitación para ayudar a los hermanos a progresar espiritualmente?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: #f7fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #2d3748;">Unidad del Cuerpo:</span>
+        <select bind:value={nuevaVisita.cuerpoNombrados.unidadCuerpo} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value="buena">Buena Unidad</option>
+            <option value="regular">Regular / Trabajando en ello</option>
+            <option value="problemas">Existen diferencias notables</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #2d3748;">Programa de Capacitación:</span>
+        <select bind:value={nuevaVisita.cuerpoNombrados.programaCapacitacion} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value={true}>Activo y en marcha</option>
+            <option value={false}>No existe / Pendiente</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre el ejemplo, unidad y eficacia de los nombrados:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 160px;"
+      bind:value={nuevaVisita.cuerpoNombrados.observaciones}
+      placeholder="Comente sobre el ambiente de confianza, la calidad de la enseñanza y la disposición para pastorear..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #38a169; display: inline-block;">
+    9. LOCAL DE REUNIÓN
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2f855a;"
+    on:click={() => mostrarPreguntasLocal = !mostrarPreguntasLocal}
+  >
+    {mostrarPreguntasLocal ? 'OCULTAR PREGUNTAS SOBRE EL LOCAL ▲' : 'VER PREGUNTAS SOBRE EL LOCAL ▼'}
+  </button>
+
+  {#if mostrarPreguntasLocal}
+    <div style="background: #f0fff4; border-left: 4px solid #38a169; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #22543d; border-radius: 0 8px 8px 0;">
+      <div style="margin-bottom: 10px;">
+        <strong>Limpieza y Cuidado:</strong>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Está el local bien cuidado? ¿Funciona bien el programa de limpieza?</li>
+          <li>¿Participan todos los que pueden (incluyendo niños y jóvenes)?</li>
+          <li>¿Tablero de anuncios actualizado?</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Seguridad y LDC:</strong>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Hay un plan de seguridad para reuniones y se sigue?</li>
+          <li>¿Se vela por la seguridad en tareas de reparación?</li>
+          <li>¿Se siguen las instrucciones del LDC mediante el Capacitador de Mantenimiento?</li>
+        </ul>
+      </div>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: #f9fafb; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">Programa de Limpieza:</span>
+        <select bind:value={nuevaVisita.localReunion.programaLimpieza} style="padding: 5px; border-radius: 4px; border: 1px solid #d1d5db;">
+            <option value="si">Funciona bien</option>
+            <option value="mejorable">Necesita ajustes</option>
+            <option value="no">Deficiente / No existe</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #374151;">Plan de Seguridad:</span>
+        <select bind:value={nuevaVisita.localReunion.planSeguridad} style="padding: 5px; border-radius: 4px; border: 1px solid #d1d5db;">
+            <option value={true}>Establecido y en uso</option>
+            <option value={false}>No establecido / No se sigue</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Mantenimiento, Seguridad y LDC:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
+      bind:value={nuevaVisita.localReunion.observaciones}
+      placeholder="Comente sobre la participación de los jóvenes, el estado del tablero y el uso del Capacitador de Mantenimiento..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #718096; display: inline-block;">
+    10. IRREGULARES E INACTIVOS
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
+    on:click={() => mostrarPreguntasInactivos = !mostrarPreguntasInactivos}
+  >
+    {mostrarPreguntasInactivos ? 'OCULTAR GUÍA DE ANÁLISIS ▲' : 'VER PREGUNTAS SOBRE INACTIVOS ▼'}
+  </button>
+
+  {#if mostrarPreguntasInactivos}
+    <div style="background: #f7fafc; border-left: 4px solid #718096; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #2d3748; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>Hablar sobre las razones de su irregularidad / inactividad.</li>
+        <li>¿De qué manera se les puede ayudar eficazmente?</li>
+        <li>¿Qué acciones concretas han tomado los ancianos para ayudarlos a regresar?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="margin-bottom: 15px; background: #edf2f7; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+    <label style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Existe un plan de ayuda definido por los ancianos?</label>
+    <select bind:value={nuevaVisita.analisisInactivos.planAccion} style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0;">
+        <option value={true}>Sí</option>
+        <option value={false}>No / En proceso</option>
+    </select>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de causas y labor de ayuda:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
+      bind:value={nuevaVisita.analisisInactivos.observaciones}
+      placeholder="Describa las razones detectadas (salud, espirituales, desánimo) y las medidas de pastoreo que se están aplicando..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #fffaf0;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #7b341e; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #ed8936; display: inline-block;">
+    11. ANÁLISIS DE LA ACTIVIDAD DE LOS PRECURSORES
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #feebc8; border: 1px solid #fbd38d; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9c4221;"
+    on:click={() => mostrarPreguntasDetallePrecursores = !mostrarPreguntasDetallePrecursores}
+  >
+    {mostrarPreguntasDetallePrecursores ? 'OCULTAR GUÍA DE ANÁLISIS ▲' : 'VER PREGUNTAS SOBRE PRECURSORES ▼'}
+  </button>
+
+  {#if mostrarPreguntasDetallePrecursores}
+    <div style="background: #fffaf0; border-left: 4px solid #ed8936; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #7b341e; border-radius: 0 8px 8px 0;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Cómo marcha el año de servicio? ¿Tienen horario práctico?</li>
+          <li>¿Participan en todas las facetas y dirigen cursos regularmente?</li>
+          <li>¿Usan publicaciones recomendadas y siguen sugerencias?</li>
+          <li>¿Reciben estímulo y apoyo de los ancianos?</li>
+        </ul>
+        <ul style="padding-left: 20px; list-style-type: disc;">
+          <li>¿Asisten a las reuniones de servicio? Si no, ¿por qué?</li>
+          <li>¿Tienden a salir precursor con precursor? ¿Por qué?</li>
+          <li>¿Animan a otros a emprender el servicio o mejorar su ministerio?</li>
+        </ul>
+      </div>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: white; padding: 15px; border-radius: 6px; border: 1px solid #fbd38d;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #7b341e;">Apoyo de los ancianos:</span>
+        <select bind:value={nuevaVisita.precursoresAnalisis.apoyoAncianos} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value="si">Excelente apoyo</option>
+            <option value="irregular">Podría mejorar</option>
+            <option value="no">Escaso estímulo</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #7b341e;">Horarios prácticos:</span>
+        <select bind:value={nuevaVisita.precursoresAnalisis.horarioPractico} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value={true}>La mayoría tiene horario fijo</option>
+            <option value={false}>Tienen dificultades con las horas</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre el desempeño y espíritu de los precursores:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 150px;"
+      bind:value={nuevaVisita.precursoresAnalisis.observaciones}
+      placeholder="Comente sobre el uso de publicaciones, asistencia a reuniones de servicio y la tendencia de salir acompañados..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: white;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #2d3748; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #319795; display: inline-block;">
+    12. CONTABILIDAD Y COMITÉ DE MANTENIMIENTO
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #e6fffa; border: 1px solid #b2f5ea; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2c7a7b;"
+    on:click={() => mostrarPreguntasContabilidad = !mostrarPreguntasContabilidad}
+  >
+    {mostrarPreguntasContabilidad ? 'OCULTAR PUNTOS DE REVISIÓN ▲' : 'VER PREGUNTAS DE CONTABILIDAD ▼'}
+  </button>
+
+  {#if mostrarPreguntasContabilidad}
+    <div style="background: #e6fffa; border-left: 4px solid #319795; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #234e52; border-radius: 0 8px 8px 0;">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li><strong>Contabilidad en línea:</strong> ¿Han probado la función de contabilidad en línea según la instrucción S147_S_202506?</li>
+        <li><strong>Revisión de Archivos:</strong> Analizar cualquier pregunta o duda que haya surgido al revisar los registros contables físicos o digitales.</li>
+        <li><strong>Comité de Mantenimiento:</strong> Si aplica, evaluar la coordinación entre contabilidad y los gastos de mantenimiento del local.</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: #f0fff4; padding: 15px; border-radius: 6px; border: 1px solid #b2f5ea;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #234e52;">Función en línea (S-147):</span>
+        <select bind:value={nuevaVisita.contabilidad.contabilidadEnLinea} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value="no">No utilizada aún</option>
+            <option value="si">Implementada con éxito</option>
+            <option value="proceso">En proceso de prueba</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #234e52;">Revisión de archivos:</span>
+        <select bind:value={nuevaVisita.contabilidad.archivosRevisados} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value={true}>Archivos en orden</option>
+            <option value={false}>Se hallaron discrepancias</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre Contabilidad y Archivos:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+      bind:value={nuevaVisita.contabilidad.observaciones}
+      placeholder="Detalle aquí el progreso con la contabilidad en línea y cualquier hallazgo relevante en la auditoría de archivos..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 2px solid #feb2b2; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #fff5f5;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #c53030; margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 1.4rem;">⚠️</span> 13. PROBLEMAS GRAVES QUE REQUIERAN ATENCIÓN
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #fed7d7; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9b2c2c;"
+    on:click={() => mostrarPreguntasProblemas = !mostrarPreguntasProblemas}
+  >
+    {mostrarPreguntasProblemas ? 'OCULTAR GUÍA DE PRIORIDAD ▲' : 'VER PUNTOS DE ATENCIÓN ▼'}
+  </button>
+
+  {#if mostrarPreguntasProblemas}
+    <div style="background: white; border-left: 4px solid #c53030; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #742a2a; border-radius: 0 8px 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>¿Existen problemas de conducta, desunión o doctrinales que amenacen la paz de la congregación?</li>
+        <li>¿Hay asuntos legales o de abuso que requieran atención inmediata?</li>
+        <li>¿Existen negligencias graves en la administración de fondos o en el cuidado del Salón?</li>
+        <li>¿Se requiere de la intervención o guía adicional de la Sucursal?</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; background: white; padding: 15px; border-radius: 6px; border: 1px solid #feb2b2;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #c53030;">Nivel de Urgencia:</span>
+        <select bind:value={nuevaVisita.problemasGraves.nivelUrgencia} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value="bajo">Bajo (Solo seguimiento)</option>
+            <option value="medio">Medio (Requiere acción en la visita)</option>
+            <option value="alto">Alto (Crítico / Prioridad máxima)</option>
+        </select>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #c53030;">¿Notificar a Sucursal?:</span>
+        <select bind:value={nuevaVisita.problemasGraves.requiereIntervencionSucursal} style="padding: 5px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            <option value={false}>No por ahora</option>
+            <option value={true}>SÍ, se requiere guía de la Sucursal</option>
+        </select>
+    </div>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #c53030;">Descripción detallada del problema y medidas tomadas:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #feb2b2; border-radius: 6px; padding: 10px; min-height: 140px; background-color: #fff;"
+      bind:value={nuevaVisita.problemasGraves.observaciones}
+      placeholder="Describa con claridad el problema, las personas implicadas y qué pasos se han dado hasta ahora..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #f8fafc;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #4a5568; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #718096; display: inline-block;">
+    14. MISCELÁNEOS
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
+    on:click={() => mostrarPreguntasMiscelaneos = !mostrarPreguntasMiscelaneos}
+  >
+    {mostrarPreguntasMiscelaneos ? 'OCULTAR GUÍA ▲' : 'VER PUNTOS ADICIONALES ▼'}
+  </button>
+
+  {#if mostrarPreguntasMiscelaneos}
+    <div style="background: white; border-left: 4px solid #718096; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #2d3748; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>Asuntos locales específicos que no corresponden a los módulos anteriores.</li>
+        <li>Situaciones excepcionales surgidas durante la semana de la visita.</li>
+        <li>Reconocimientos especiales o esfuerzos loables de la congregación.</li>
+        <li>Acuerdos menores tomados con el Cuerpo de Ancianos que no son "Problemas Graves".</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="margin-bottom: 15px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+    <label style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Quedan temas pendientes para la próxima visita?</label>
+    <select bind:value={nuevaVisita.miscelaneos.temasPendientes} style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0;">
+        <option value={false}>No, todo concluido</option>
+        <option value={true}>Sí, anotar en el análisis</option>
+    </select>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Otros temas y observaciones adicionales:</label>
+    <textarea 
+      style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
+      bind:value={nuevaVisita.miscelaneos.observaciones}
+      placeholder="Utilice este espacio para cualquier otro asunto relevante detectado durante la visita..."
+    ></textarea>
+  </div>
+</div>
+
+<div class="seccion-form-bloque" style="border: 1px solid #cbd5e0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #f1f5f9;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #1e293b; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #64748b; display: inline-block;">
+    15. IDEAS PARA DISCURSOS DE SERVICIO
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #475569;"
+    on:click={() => mostrarPreguntasDiscursos = !mostrarPreguntasDiscursos}
+  >
+    {mostrarPreguntasDiscursos ? 'OCULTAR SUGERENCIAS DE ENFOQUE ▲' : 'VER SUGERENCIAS DE ENFOQUE ▼'}
+  </button>
+
+  {#if mostrarPreguntasDiscursos}
+    <div style="background: white; border-left: 4px solid #64748b; padding: 15px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #334155; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <p style="margin-bottom: 8px;"><strong>Temas útiles para la congregación:</strong></p>
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li>Elogios específicos por lo visto en la semana.</li>
+        <li>Cómo mejorar la calidad de las revisitas.</li>
+        <li>Animar a los jóvenes con metas progresivas.</li>
+      </ul>
+    </div>
+  {/if}
+
+  <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
     
-    <div style="margin-bottom: 15px;">
-      <p><strong style="color: #c53030;">Resultados y Facetas:</strong></p>
-      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
-        <li style="margin-bottom: 5px;">• ¿En qué aspectos del ministerio están teniendo buenos resultados y en cuáles necesitan mejoras?</li>
-        <li style="margin-bottom: 5px;">• ¿Participan los publicadores en diferentes facetas de la predicación?</li>
-        <li style="margin-bottom: 5px;">• ¿Tiene planes la congregación para participar en otras formas (calles, negocios, teléfono, etc.)?</li>
-      </ul>
-    </div>
-
-    <div style="margin-bottom: 15px;">
-      <p><strong style="color: #c53030;">Sobre los Cursos Bíblicos:</strong></p>
-      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
-        <li style="margin-bottom: 5px;">• ¿El CA ha analizado cómo lograr que se dirijan más cursos bíblicos?</li>
-        <li style="margin-bottom: 5px;">• ¿Los publicadores los ofrecen en toda ocasión apropiada y de manera directa?</li>
-        <li style="margin-bottom: 5px;">• ¿Dan los ancianos y siervos ministeriales buen ejemplo de entusiasmo siendo los primeros en ofrecerlos?</li>
-        <li style="margin-bottom: 5px;">• ¿Brindan los SG ayuda personal y estímulo a quienes lo necesitan?</li>
-      </ul>
-    </div>
-
-    <div style="margin-bottom: 15px;">
-      <p><strong style="color: #c53030;">Sobre la Predicación de Casa en Casa:</strong></p>
-      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
-        <li style="margin-bottom: 5px;">• ¿Se da prioridad a la predicación de casa en casa? <small style="color: #718096;">(S-147-24.04; Anuncio-2024 03 31)</small></li>
-        <li style="margin-bottom: 5px;">• ¿Qué actitud manifiestan los publicadores? ¿Entusiastas y positivos, o con negatividad/temor?</li>
-        <li style="margin-bottom: 5px;">• ¿Se predica en las horas en que es más probable encontrar a la gente?</li>
-        <li style="margin-bottom: 5px;">• ¿Apoyan regularmente las RSC? ¿Llevan la delantera los nombrados y precursores?</li>
-        <li style="margin-bottom: 5px;">• Si algunos no salen con la congregación, ¿cuál es la razón?</li>
-        <li style="margin-bottom: 5px;">• ¿Se dirigen RSC prácticas y bien preparadas? <small style="color: #718096;">[Km 3/15 4 párrs. 4-7]</small></li>
-      </ul>
+    <div style="background: #ffffff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; border-left: 5px solid #3182ce; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color: #2b6cb0;">
+        📢 Sugerencias del Cuerpo de Ancianos (para mencionar):
+      </label>
+      <textarea 
+        style="width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; min-height: 80px; background-color: #f0f7ff; font-style: italic;"
+        bind:value={nuevaVisita.ideasDiscursos.sugerenciasAncianos}
+        placeholder="¿Qué puntos específicos quieren los ancianos que usted refuerce?"
+      ></textarea>
     </div>
 
     <div>
-      <p><strong style="color: #c53030;">Eficacia y Herramientas:</strong></p>
-      <ul style="padding-left: 20px; margin: 5px 0; list-style-type: none;">
-        <li style="margin-bottom: 5px;">• ¿Necesitan ayuda para ser más eficaces en revisitas, conversar o usar herramientas?</li>
-        <li style="margin-bottom: 5px;">• ¿Vuelven a visitar a los que muestran interés en la verdad?</li>
-        <li style="margin-bottom: 5px;">• ¿Se están usando apropiada y eficazmente las publicaciones?</li>
+      <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Textos bíblicos seleccionados:</label>
+      <input 
+        type="text" 
+        style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px;"
+        bind:value={nuevaVisita.ideasDiscursos.textosBiblicos}
+        placeholder="Ej: Hechos 20:20; 2 Tim. 4:5..."
+      />
+    </div>
+
+    <div>
+      <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Esquema y puntos clave personales:</label>
+      <textarea 
+        style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
+        bind:value={nuevaVisita.ideasDiscursos.puntosClave}
+        placeholder="Desarrolle aquí sus ideas principales y aplicaciones prácticas para la congregación..."
+      ></textarea>
+    </div>
+  </div>
+  </div>
+
+  <div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #fdf2f2;">
+  <div class="subtitulo-form" style="font-weight: bold; color: #9b2c2c; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #e53e3e; display: inline-block;">
+    2. SUGERENCIAS SOBRE REUNIONES (Observaciones de la semana)
+  </div>
+
+  <button 
+    type="button" 
+    style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030;"
+    on:click={() => mostrarSugerenciasReuniones = !mostrarSugerenciasReuniones}
+  >
+    {mostrarSugerenciasReuniones ? 'OCULTAR GUÍA DE OBSERVACIÓN ▲' : 'VER PUNTOS A EVALUAR (S-38) ▼'}
+  </button>
+
+  {#if mostrarSugerenciasReuniones}
+    <div style="background: white; border-left: 4px solid #e53e3e; padding: 20px; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; color: #742a2a; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <p><strong>De acuerdo con S-38 y sfg-S cap. 4:</strong></p>
+      <ul style="padding-left: 20px; list-style-type: disc;">
+        <li><strong>Vida y Ministerio:</strong> Revise si los formularios S-89 se entregan con semanas de antelación y si el consejero auxiliar actúa con tacto y eficacia.</li>
+        <li><strong>Fin de Semana:</strong> Observe si el conductor del Estudio de La Atalaya hace preguntas adicionales breves para resaltar puntos clave y si anima a participar con sus propias palabras.</li>
       </ul>
     </div>
+  {/if}
 
-  </div>
-{/if}
+  <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+    <div style="background: white; border: 1px solid #fed7d7; padding: 15px; border-radius: 6px;">
+      <h4 style="font-size: 0.9rem; color: #9b2c2c; margin-bottom: 10px; font-weight: bold;">Vida y Ministerio Cristianos</h4>
+      
+      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Procedimiento de asignaciones (S-89/Tablero):</label>
+      <textarea 
+        style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; margin-bottom: 10px; min-height: 60px;"
+        bind:value={nuevaVisita.observacionesReuniones.vidaMinisterio.asignacionesS89}
+        placeholder="Anote sus sugerencias sobre el orden y la prontitud..."></textarea>
 
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Análisis y Observaciones:</label>
-        <textarea 
-          style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
-          bind:value={nuevaVisita.ministerio.observaciones}
-          placeholder="Escribe aquí el análisis basado en las preguntas anteriores..."
-        ></textarea>
-      </div>
-
-      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-
-      <div>
-        <label style="font-weight: bold; display: block; margin-bottom: 10px;">Programa Local de Predicación:</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          {#each diasSemana as dia}
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f7fafc;">
-              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                <input 
-                  type="checkbox" 
-                  on:change={() => toggleDiaMinisterio(dia)} 
-                  checked={nuevaVisita.ministerio.programa.some(p => p.dia === dia)}
-                />
-                {dia}
-              </label>
-
-              {#each nuevaVisita.ministerio.programa as prog}
-                {#if prog.dia === dia}
-                  <input 
-                    type="text" 
-                    placeholder="Hora"
-                    style="width: 80px; padding: 2px 5px; border: 1px solid #cbd5e0; border-radius: 4px;"
-                    bind:value={prog.hora}
-                  />
-                {/if}
-              {/each}
-            </div>
-          {/each}
-        </div>
-      </div>
+      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Función del consejero auxiliar:</label>
+      <textarea 
+        style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; min-height: 60px;"
+        bind:value={nuevaVisita.observacionesReuniones.vidaMinisterio.consejeroAuxiliar}
+        placeholder="Observaciones sobre cómo se está brindando la ayuda a los estudiantes..."></textarea>
     </div>
 
-        <div class="campo" style="margin-top: 15px; display: flex; flex-direction: column;">
-          <label for="v-obs">Observaciones / Pendientes</label>
-          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+    <div style="background: white; border: 1px solid #fed7d7; padding: 15px; border-radius: 6px;">
+      <h4 style="font-size: 0.9rem; color: #9b2c2c; margin-bottom: 10px; font-weight: bold;">Reunión del Fin de Semana</h4>
+      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Estudio de La Atalaya:</label>
+      <textarea 
+        style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; min-height: 80px;"
+        bind:value={nuevaVisita.observacionesReuniones.finDeSemana.estudioAtalaya}
+        placeholder="Sugerencias para el conductor o sobre la calidad de los comentarios..."></textarea>
+    </div>
+  </div>
+</div>
+
+        <div class="campo" style="margin-top: 20px; display: flex; flex-direction: column;">
+          <label for="v-obs" style="font-weight: bold; margin-bottom: 5px;">Observaciones Finales / Pendientes</label>
+          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Temas adicionales o seguimiento..."></textarea>
         </div>
-        <div class="acciones-inferiores">
+
+        <div class="acciones-inferiores" style="margin-top: 20px; display: flex; gap: 10px;">
           <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
-          <button class="btn-primario" on:click={guardarVisita}>Guardar Registro</button>
+          <button class="btn-primario" on:click={guardarVisita}>Guardar Registro Completo</button>
         </div>
-      </div>
+      </div> 
     {/if}
   </Panel>
 {/if}

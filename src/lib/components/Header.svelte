@@ -23,34 +23,44 @@
       ⚙️
     </button>
   </div>
+
+  <div class="barra-oscura-inferior"></div>
 </header>
 
 <style>
   .header { 
-    height: 120px; 
     width: 100%; 
     position: relative; 
-    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   }
 
-   .header-top { 
-  display: flex; 
-  align-items: center; 
-  background: #ffffff; 
-  height: 72px; 
-  /* Aumentamos el padding izquierdo a 140px para dar aire después del botón menú */
-  padding: 0 20px 0 140px; 
-  box-sizing: border-box;
-  width: 100%;
-  position: relative;
-}
+  /* FRANJA BLANCA */
+  .header-top { 
+    display: flex; 
+    align-items: center; 
+    background: #ffffff; 
+    height: 72px; 
+    padding: 0 20px 0 140px; 
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+  }
 
-.header-logo { 
+  /* FRANJA GRIS OSCURA (AHORA DEBAJO) */
+  .barra-oscura-inferior {
+    background-color: #333333; /* El color gris oscuro/negro */
+    height: 48px; /* Ajusta la altura según prefieras */
+    width: 100%;
+  }
+
+  .header-logo { 
     position: absolute; 
     left: 0; 
     top: 0; 
     width: 90px; 
-    height: 96px; 
+    height: 96px; /* Ajustado para que baje un poco sobre la franja oscura */
     background: #b63a3a; 
     display: flex; 
     align-items: center; 
@@ -58,46 +68,39 @@
     z-index: 10; 
   }
 
-.logo-text { 
+  .logo-text { 
     color: white; 
     font-size: 46px; 
     font-weight: bold; 
   }
 
-  .header-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  /* Eliminamos márgenes negativos o extraños si los hubiera */
-  margin: 0; 
-}
+  .header-info h1 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #333;
+    font-weight: bold;
+  }
 
-.header-info h1 {
-  margin: 0;
-  font-size: 1.3rem; /* Un poquito más grande para que destaque */
-  line-height: 1.2;
-}
   .header-info p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #666;
-}
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+  }
 
-  /* El botón de menú se queda en su sitio, pero el texto ya no lo toca */
-.menu-toggle { 
-  position: absolute; 
-  left: 100px; 
-  top: 22px; 
-  z-index: 20; 
-  background: none; 
-  border: none; 
-  font-size: 26px; 
-  cursor: pointer; 
-}
+  .menu-toggle { 
+    position: absolute; 
+    left: 100px; 
+    top: 22px; 
+    z-index: 20; 
+    background: none; 
+    border: none; 
+    font-size: 26px; 
+    cursor: pointer; 
+  }
 
-.spacer { flex: 1; } /* Empuja la configuración a la derecha */
+  .spacer { flex: 1; }
 
-.config-button { 
+  .config-button { 
     background: none; 
     border: none; 
     padding: 8px; 
