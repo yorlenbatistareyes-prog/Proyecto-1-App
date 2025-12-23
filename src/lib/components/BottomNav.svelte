@@ -24,9 +24,9 @@
     <span class="texto">Visitas</span>
   </button>
 
-  <button class:activo={$vistaActual === 'registros'} on:click={() => $vistaActual = 'registros'}>
-    <img class="icono-nav" src="/icons/registros.svg" alt="Registros" />
-    <span class="texto">Registros</span>
+  <button class:activo={$vistaActual === 'informes'} on:click={() => $vistaActual = 'informes'}>
+    <img class="icono-nav" src="/icons/registros.svg" alt="Informes" />
+    <span class="texto">Informes</span>
   </button>
 </nav>
 

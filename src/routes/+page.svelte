@@ -1,14 +1,44 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { jsPDF } from 'jspdf';
+  import autoTable from 'jspdf-autotable';
+  
+  // Componentes
   import Panel from '$lib/components/Panel.svelte';
-  import { vistaActual, circuitos, congregaciones } from '$lib/stores';
-  import type { Circuito, Congregacion, Vista } from '$lib/types';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
-  import { jsPDF } from 'jspdf';
-  import autoTable from 'jspdf-autotable';
-  import { visitasStore } from '$lib/stores';
+  import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento } from '$lib/stores';
+  import type { Circuito, Congregacion, Vista } from '$lib/types';
+
+  // Lógica reactiva para el Modo Oscuro
+  $: if (typeof document !== 'undefined') {
+    document.body.classList.toggle('dark-mode', $temaOscuro);
+  }
+
+  // Variables para las estadísticas
+  let statsMes = { total: 0, congreDistintas: 0, promedioPorSemana: 0 };
+
+  // Función para calcular estadísticas automáticamente
+  $: {
+    const ahora = new Date();
+    const mesActual = ahora.getMonth();
+    const añoActual = ahora.getFullYear();
+
+    const visitasDelMes = $visitasStore.filter(v => {
+      const fechaV = new Date(v.fecha);
+      return fechaV.getMonth() === mesActual && fechaV.getFullYear() === añoActual;
+    });
+
+    const congreUnicas = new Set(visitasDelMes.map(v => v.congregacionId));
+
+    statsMes = {
+      total: visitasDelMes.length,
+      congreDistintas: congreUnicas.size,
+      promedioPorSemana: (visitasDelMes.length / 4).toFixed(1)
+    };
+  }
 
   let menuAbiertoId: number | null = null;
  
@@ -119,6 +149,67 @@
   function eliminarCongregacion(index: number) {
     if (confirm('¿Eliminar esta congregación?')) {
       $congregaciones = $congregaciones.filter((_, i) => i !== index);
+    }
+  }
+
+  /* LÓGICA: CONFIGURACIÓN Y BACKUP */
+  function exportarBackup() {
+    // 1. Consolidamos todos los datos existentes en los stores
+    const backup = {
+      circuitos: $circuitos,
+      congregaciones: $congregaciones,
+      visitas: $visitasStore,
+      fechaExportacion: new Date().toISOString(),
+      metadata: { app: "Asistente de Visitas", version: "1.0.0" }
+    };
+
+    // 2. Creación del archivo descargable
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    const nombreFecha = new Date().toISOString().split('T')[0]; // Ejemplo: 2025-12-23
+    link.download = `backup_circuito_${nombreFecha}.json`;
+    link.href = url;
+    
+    // 3. Ejecución de la descarga
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importarBackup(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        
+        // Validación mínima de estructura
+        if (data.congregaciones && data.visitas) {
+          if (confirm("¿Importar respaldo? Se sobrescribirán los datos actuales.")) {
+            $circuitos = data.circuitos || [];
+            $congregaciones = data.congregaciones;
+            $visitasStore = data.visitas;
+            alert("Restauración completada con éxito.");
+          }
+        }
+      } catch (err) {
+        alert("El archivo no es un respaldo válido.");
+      }
+    };
+    reader.readAsText(file);
+    input.value = ''; // Resetear el input
+  }
+
+  function limpiarTodo() {
+    if (confirm("⚠️ ¿Borrar TODOS los datos de la aplicación definitivamente?")) {
+      $circuitos = [];
+      $congregaciones = [];
+      $visitasStore = [];
+      alert("La base de datos ha sido vaciada.");
     }
   }
 
@@ -547,51 +638,6 @@
   let nombreSuperintendente = "";
   let circuitoConfig = "";
 
-  // Función para Exportar TODO (Backup)
-  function exportarBackup() {
-    const backup = {
-      circuitos: $circuitos,
-      congregaciones: $congregaciones,
-      visitas: $visitasStore,
-      perfil: { nombre: nombreSuperintendente, circuito: circuitoConfig }
-    };
-    
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Backup_Sistema_S302_${new Date().toISOString().slice(0,10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // Función para Importar Backup
-  function importarBackup(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-
-    const archivo = input.files[0];
-    const lector = new FileReader();
-    
-    lector.onload = (e) => {
-      try {
-        const datos = JSON.parse(e.target?.result as string);
-        if (confirm('¿Deseas restaurar esta copia? Los datos actuales serán reemplazados.')) {
-          if (datos.circuitos) $circuitos = datos.circuitos;
-          if (datos.congregaciones) $congregaciones = datos.congregaciones;
-          if (datos.visitas) $visitasStore = datos.visitas;
-          if (datos.perfil) {
-            nombreSuperintendente = datos.perfil.nombre;
-            circuitoConfig = datos.perfil.circuito;
-          }
-          alert('¡Copia de seguridad restaurada con éxito!');
-        }
-      } catch (err) {
-        alert('Error: El archivo no es una copia de seguridad válida.');
-      }
-    };
-    lector.readAsText(archivo);
-  }
 </script>
  
 <Sidebar />
@@ -626,38 +672,56 @@
   {/if}
  
   {#if $vistaActual === 'circuito'}
-    <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
-      {#if !creandoCircuito}
-        <div class="flex-end"><button class="btn-primario" on:click={prepararNuevoCircuito}>Nuevo circuito</button></div>
-        <table class="tabla">
-          <thead><tr><th>Nombre</th><th>Idioma</th><th>País</th><th>Acciones</th></tr></thead>
-          <tbody>
-            {#each $circuitos as c, index}
-              <tr>
-                <td>{c.nombre}</td><td>{c.idioma}</td><td>{c.pais}</td>
-                <td>
-                  <div class="acciones-tabla">
-                    <button class="btn-secundario" on:click={() => editarCircuito(c, index)}>Editar</button>
-                    <button class="btn-eliminar" on:click={() => eliminarCircuito(index)}>Eliminar</button>
-                  </div>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      {:else}
-        <div class="form-grande">
-          <div class="campo"><label>Nombre del Circuito</label><input bind:value={nuevoCircuito.nombre} /></div>
-          <div class="campo"><label>Idioma</label><input bind:value={nuevoCircuito.idioma} /></div>
-          <div class="campo"><label>País</label><input bind:value={nuevoCircuito.pais} /></div>
-          <div class="acciones-inferiores">
-            <button class="btn-secundario" on:click={() => creandoCircuito = false}>Cancelar</button>
-            <button class="btn-primario" on:click={guardarCircuito}>Guardar</button>
-          </div>
+  <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
+    {#if !creandoCircuito}
+      <div class="header-tabla">
+        <button class="btn-primario" on:click={prepararNuevoCircuito}>
+          + Nuevo circuito
+        </button>
+      </div>
+      
+      <table class="tabla-estilizada">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Idioma</th>
+            <th>País</th>
+            <th class="col-acciones">Acciones</th> 
+          </tr>
+        </thead>
+        <tbody>
+          {#each $circuitos as c, index}
+            <tr>
+              <td><strong>{c.nombre}</strong></td>
+              <td>{c.idioma}</td>
+              <td>{c.pais}</td>
+              <td class="celda-acciones"> 
+                <div class="grupo-botones">
+                  <button class="btn-tabla btn-editar" on:click={() => editarCircuito(c, index)}>
+                    Editar
+                  </button>
+                  <button class="btn-tabla btn-eliminar" on:click={() => eliminarCircuito(index)}>
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {:else}
+      <div class="form-grande">
+        <div class="campo"><label>Nombre del Circuito</label><input bind:value={nuevoCircuito.nombre} /></div>
+        <div class="campo"><label>Idioma</label><input bind:value={nuevoCircuito.idioma} /></div>
+        <div class="campo"><label>País</label><input bind:value={nuevoCircuito.pais} /></div>
+        <div class="acciones-inferiores">
+          <button class="btn-secundario" on:click={() => creandoCircuito = false}>Cancelar</button>
+          <button class="btn-primario" on:click={guardarCircuito}>Guardar</button>
         </div>
-      {/if}
-    </Panel>
-  {/if}
+      </div>
+    {/if}
+  </Panel>
+{/if}
  
   {#if $vistaActual === 'congregaciones'}
   <Panel titulo="Congregaciones">
@@ -698,9 +762,42 @@
           <td style="padding: 10px; font-size: 0.85rem;">{c.sucursal}</td>
           <td style="padding: 10px; font-size: 0.85rem;">{c.reunionEntreSemana} {c.horaEntreSemana}</td>
           <td style="padding: 10px; font-size: 0.85rem;">{c.reunionFinSemana} {c.horaFinSemana}</td>
-          <td style="padding: 10px; text-align: center;">
-            <button class="btn-tabla-accion" on:click={() => editarCongregacion(c, i)}>ACCIONES</button>
-          </td>
+          <td style="padding: 10px; text-align: center; position: relative;">
+      <button 
+        class="btn-tabla-accion" 
+        on:click|stopPropagation={() => toggleMenu(i)}
+      >
+        ACCIONES
+      </button>
+
+      {#if menuAbiertoId === i}
+        <div style="
+          position: absolute; 
+          right: 10px; 
+          top: 40px; 
+          z-index: 100; 
+          background: white; 
+          border: 1px solid #e2e8f0; 
+          border-radius: 8px; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+          min-width: 140px;
+          overflow: hidden;
+        ">
+          <button 
+            style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9;"
+            on:click={() => { editarCongregacion(c, i); cerrarMenu(); }}
+          >
+            ✏️ Editar
+          </button>
+          <button 
+            style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
+            on:click={() => { eliminarCongregacion(i); cerrarMenu(); }}
+          >
+            🗑️ Eliminar
+          </button>
+        </div>
+      {/if}
+    </td>
         </tr>
       {/each}
     </tbody>
@@ -1902,6 +1999,120 @@
     {/if}
   </Panel>
 {/if}
+
+{#if $vistaActual === 'informes'}
+  <Panel titulo="Estadísticas Mensuales">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Visitas este mes</span>
+        <span class="stat-value">{statsMes.total}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Congregaciones</span>
+        <span class="stat-value">{statsMes.congreDistintas}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Promedio semanal</span>
+        <span class="stat-value">{statsMes.promedioPorSemana}</span>
+      </div>
+    </div>
+
+    <div class="config-card" style="margin-top: 20px;">
+      <h3>📋 Detalle de Visitas</h3>
+      {#if statsMes.total === 0}
+        <p class="texto-vacio">No hay visitas registradas este mes aún.</p>
+      {:else}
+        <ul class="lista-informe">
+          {#each $visitasStore.filter(v => new Date(v.fecha).getMonth() === new Date().getMonth()) as visita}
+            <li>
+              <strong>{new Date(visita.fecha).toLocaleDateString()}</strong>: 
+              {visita.congregacionNombre}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </Panel>
+{/if}
+
+{#if $vistaActual === 'configuracion'}
+  <div class="config-container" in:fade>
+    <header class="config-header">
+      <h1>Configuración</h1>
+      <p>Gestiona los datos y preferencias de la aplicación</p>
+    </header>
+
+    <div class="config-grid">
+      <section class="config-card">
+        <h3>📦 Gestión de Datos</h3>
+        <p>Copia de seguridad y restauración (útil para mover datos entre PCs)</p>
+        <div class="acciones-datos">
+          <button class="btn-config" on:click={exportarBackup}>
+            📥 Exportar Backup (JSON)
+          </button>
+          <button class="btn-config btn-secundario" on:click={() => document.getElementById('importar').click()}>
+            📤 Importar Backup
+          </button>
+          <input type="file" id="importar" style="display: none;" on:change={importarBackup} />
+        </div>
+      </section>
+
+      <section class="config-card">
+        <h3>💻 Información del Sistema</h3>
+        <div class="info-item">
+          <span>Versión:</span>
+          <strong>1.0.0 (Tauri Desktop)</strong>
+        </div>
+        <div class="info-item">
+          <span>Ubicación:</span>
+          <strong>Holguín, Cuba</strong>
+        </div>
+      </section>
+
+      <section class="config-card">
+  <h3>🎨 Apariencia</h3>
+  <p>Personaliza los colores y el estilo visual de tu asistente.</p>
+  
+  <div class="config-item">
+    <span>Tema del sistema:</span>
+    <select class="select-estilizado" bind:value={$temaOscuro}>
+      <option value={false}>☀️ Modo Claro</option>
+      <option value={true}>🌙 Modo Oscuro</option>
+    </select>
+  </div>
+
+  <div class="config-item" style="margin-top: 15px;">
+    <span>Color de acento:</span>
+    <div class="selector-colores">
+      <button 
+        class="color-dot" 
+        style="background: #b63a3a;" 
+        on:click={() => $colorAcento = '#b63a3a'}
+        class:activo={$colorAcento === '#b63a3a'}></button>
+      <button 
+        class="color-dot" 
+        style="background: #2b6cb0;" 
+        on:click={() => $colorAcento = '#2b6cb0'}
+        class:activo={$colorAcento === '#2b6cb0'}></button>
+      <button 
+        class="color-dot" 
+        style="background: #2d3748;" 
+        on:click={() => $colorAcento = '#2d3748'}
+        class:activo={$colorAcento === '#2d3748'}></button>
+    </div>
+  </div>
+</section>
+
+      <section class="config-card">
+        <h3 style="color: #dc2626;">⚠️ Zona Peligrosa</h3>
+        <p>Esto borrará todas las congregaciones y visitas guardadas.</p>
+        <button class="btn-eliminar" on:click={limpiarTodo}>
+          Borrrar todos los datos
+        </button>
+      </section>
+    </div>
+  </div>
+{/if}
 </main>
  
 <style>
@@ -2048,5 +2259,265 @@
   /* Mejora de los labels de los días */
   label {
     user-select: none; /* Evita que el texto se sombreado al hacer clic rápido */
+  }
+
+  .config-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    padding-bottom: 100px;
+  }
+
+  .config-header {
+    margin-bottom: 30px;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .config-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .config-card h3 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .acciones-datos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+  }
+
+  .btn-config {
+    background: #b63a3a; /* Tu color de marca */
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .btn-secundario {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .btn-eliminar {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+  }
+
+  /* ESTILOS PARA MODO OSCURO */
+/* El :global es necesario para que afecte a toda la pantalla */
+:global(body.dark-mode) {
+  background-color: #121212 !important; /* Fondo casi negro */
+  color: #ffffff !important;           /* Texto blanco */
+}
+
+/* Cambia el color de las tarjetas de configuración en modo oscuro */
+:global(body.dark-mode .config-card) {
+  background-color: #1e1e1e !important;
+  border-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* Cambia el color de las tablas y textos secundarios */
+:global(body.dark-mode td), 
+:global(body.dark-mode th),
+:global(body.dark-mode p) {
+  color: #e0e0e0 !important;
+}
+
+/* Estilo para los selectores en modo oscuro */
+:global(body.dark-mode .select-estilizado) {
+  background-color: #2d3748;
+  color: white;
+  border: 1px solid #4a5568;
+}
+
+/* Contenedor de botones para que no floten desordenados */
+  .acciones-tabla {
+    display: flex;
+    gap: 8px;
+    justify-content: center; /* Centra los botones en la celda */
+    align-items: center;
+  }
+
+  /* Estilo base para que AMBOS botones midan exactamente lo mismo */
+  .btn-accion {
+    flex: 1; /* Hace que crezcan igual */
+    min-width: 85px; /* Evita que se encojan demasiado */
+    max-width: 100px;
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+
+  /* Botón Editar - Estilo neutral */
+  .btn-editar {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+
+  .btn-editar:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+  }
+
+  /* Botón Eliminar - Estilo de advertencia */
+  .btn-borrar {
+    background-color: #fff1f2;
+    color: #e11d48;
+    border-color: #ffe4e6;
+  }
+
+  .btn-borrar:hover {
+    background-color: #ffe4e6;
+    color: #be123c;
+  }
+
+  /* Ajuste para que la tabla ocupe todo el ancho */
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  .tabla th, .tabla td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+  }
+
+  .text-center { text-align: center !important; }
+
+  /* Contenedor del botón superior */
+  .header-tabla {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 15px;
+  }
+
+  /* Tabla Estilizada */
+  .tabla-estilizada {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+  }
+
+  .tabla-estilizada th, .tabla-estilizada td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+  }
+
+  /* ALINEACIÓN DE ACCIONES */
+  .col-acciones {
+    text-align: center !important;
+  }
+
+  .celda-acciones {
+    width: 180px; /* Ancho fijo para que no se mueva */
+  }
+
+  .grupo-botones {
+    display: flex;
+    gap: 8px;
+    justify-content: center; /* Centra los botones bajo el título 'Acciones' */
+  }
+
+  /* Botones internos de la tabla */
+  .btn-tabla {
+    flex: 1; /* Ambos botones ocupan el mismo espacio */
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .btn-editar {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+
+  .btn-eliminar {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fee2e2;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 5px;
+  }
+
+  .stat-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #b63a3a; /* Tu color de acento rojo */
+  }
+
+  /* Adaptación a Modo Oscuro */
+  :global(body.dark-mode) .stat-card {
+    background: #1e1e1e;
+    border-color: #333;
+  }
+  
+  :global(body.dark-mode) .stat-label {
+    color: #94a3b8;
   }
 </style>

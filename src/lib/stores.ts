@@ -30,3 +30,17 @@ if (typeof window !== 'undefined') {
     congregaciones.subscribe(v => localStorage.setItem('asistente_congre_v1', JSON.stringify(v)));
     visitasStore.subscribe(v => localStorage.setItem('asistente_visitas_v1', JSON.stringify(v)));
 }
+
+// Recuperamos el estado previo de apariencia (para que al abrir la app se mantenga como la dejaste)
+const temaPrevio = typeof window !== 'undefined' ? localStorage.getItem('asistente_tema') === 'true' : false;
+const colorPrevio = typeof window !== 'undefined' ? localStorage.getItem('asistente_color') || '#b63a3a' : '#b63a3a';
+
+// Definimos los nuevos stores
+export const temaOscuro = writable<boolean>(temaPrevio);
+export const colorAcento = writable<string>(colorPrevio);
+
+// Guardado automático de la apariencia
+if (typeof window !== 'undefined') {
+    temaOscuro.subscribe(v => localStorage.setItem('asistente_tema', v.toString()));
+    colorAcento.subscribe(v => localStorage.setItem('asistente_color', v));
+}
