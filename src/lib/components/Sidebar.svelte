@@ -1,15 +1,20 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { vistaActual, menuAbierto } from '$lib/stores';
+  // Importamos todos los iconos necesarios
+  import { 
+    House, 
+    Map, 
+    UsersRound, 
+    Briefcase, 
+    FileText, 
+    Settings, 
+    X 
+  } from 'lucide-svelte';
 
-  const APP_VERSION = "1.0";  // Cambia este número cuando hagas una actualización
+  const APP_VERSION = "1.0";
   const ULTIMA_ACTUALIZACION = "Diciembre 2025"; 
 
-  /**
-   * Cambia la vista de la aplicación y cierra el panel lateral.
-   * Usamos el tipo 'any' en el destino para evitar conflictos de tipado 
-   * si el store espera un tipo de unión específico.
-   */
   function navegar(destino: any) {
     $vistaActual = destino;
     $menuAbierto = false;
@@ -22,7 +27,6 @@
     role="button"
     tabindex="-1"
     onclick={() => $menuAbierto = false} 
-    onkeydown={(e) => e.key === 'Escape' && ($menuAbierto = false)}
     transition:fade={{ duration: 200 }}
   ></div>
   
@@ -33,7 +37,9 @@
         class="btn-cerrar" 
         onclick={() => $menuAbierto = false} 
         aria-label="Cerrar menú"
-      >×</button>
+      >
+        <X size={28} />
+      </button>
     </div>
 
     <div class="menu-items">
@@ -41,7 +47,7 @@
         class:active={$vistaActual === 'inicio'} 
         onclick={() => navegar('inicio')}
       >
-        <img class="icono-sidebar" src="/icons/inicio.svg" alt="" />
+        <House size={20} />
         <span>Inicio</span>
       </button>
       
@@ -49,7 +55,7 @@
         class:active={$vistaActual === 'circuito'} 
         onclick={() => navegar('circuito')}
       >
-        <img class="icono-sidebar" src="/icons/circuitos.svg" alt="" />
+        <Map size={20} />
         <span>Circuito</span>
       </button>
       
@@ -57,7 +63,7 @@
         class:active={$vistaActual === 'congregaciones'} 
         onclick={() => navegar('congregaciones')}
       >
-        <img class="icono-sidebar" src="/icons/congregaciones.svg" alt="" />
+        <UsersRound size={20} />
         <span>Congregaciones</span>
       </button>
 
@@ -65,16 +71,16 @@
         class:active={$vistaActual === 'visitas'} 
         onclick={() => navegar('visitas')}
       >
-        <img class="icono-sidebar" src="/icons/visitas.svg" alt="" />
+        <Briefcase size={20} />
         <span>Visitas</span>
       </button>
 
       <button 
-        class:active={$vistaActual === 'registros'} 
-        onclick={() => navegar('registros')}
+        class:active={$vistaActual === 'informes'} 
+        onclick={() => navegar('informes')}
       >
-        <img class="icono-sidebar" src="/icons/registros.svg" alt="" />
-        <span>Registros</span>
+        <FileText size={20} />
+        <span>Informes</span>
       </button>
 
       <div class="separador"></div>
@@ -83,7 +89,7 @@
         class:active={$vistaActual === 'configuracion'} 
         onclick={() => navegar('configuracion')}
       >
-        <img class="icono-sidebar" src="/icons/configuracion.svg" alt="" />
+        <Settings size={20} />
         <span>Configuración</span>
       </button>
     </div>
@@ -140,10 +146,16 @@
   .btn-cerrar {
     background: none;
     border: none;
-    font-size: 32px;
     cursor: pointer;
     color: #bbb;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+
+  .btn-cerrar:hover {
+    color: #b63a3a;
   }
 
   .menu-items {
@@ -180,18 +192,7 @@
     border-left: 4px solid #b63a3a;
   }
 
-  .icono-sidebar {
-    width: 20px;
-    height: 20px;
-    opacity: 0.5;
-    transition: opacity 0.2s;
-  }
-
-  .active .icono-sidebar {
-    opacity: 1;
-    filter: invert(31%) sepia(54%) saturate(1450%) hue-rotate(338deg) brightness(85%) contrast(92%);
-  }
-
+  /* Ya no necesitamos .icono-sidebar ni filtros complejos */
   .separador {
     height: 1px;
     background: #eee;

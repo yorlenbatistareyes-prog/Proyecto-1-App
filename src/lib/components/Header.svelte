@@ -1,17 +1,20 @@
 <script lang="ts">
   import { menuAbierto, vistaActual } from '$lib/stores';
+  // Importación de los iconos
+  import { Menu, Settings } from 'lucide-svelte';
 
-  // Manejador para el menú con stopPropagation manual (estilo Svelte 5)
+  // Manejador de eventos
   function handleMenuClick(e: Event) {
     e.stopPropagation();
+    // En Svelte 5 los stores se siguen usando con $
     $menuAbierto = true;
   }
 </script>
 
 <header class="header">
   <div class="header-top">
-    <button class="menu-toggle" onclick={handleMenuClick}>
-      ☰
+    <button class="menu-toggle" onclick={handleMenuClick} aria-label="Abrir menú">
+      <Menu size={28} strokeWidth={2} />
     </button>
 
     <div class="header-logo">
@@ -25,8 +28,8 @@
 
     <div class="spacer"></div>
 
-    <button class="config-button" onclick={() => $vistaActual = 'configuracion'}>
-      ⚙️
+    <button class="config-button" onclick={() => ($vistaActual = 'configuracion')} aria-label="Configuración">
+      <Settings size={24} color="#666" strokeWidth={1.5} />
     </button>
   </div>
 
@@ -42,13 +45,11 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   }
 
-  /* FRANJA BLANCA */
   .header-top { 
     display: flex; 
     align-items: center; 
     background: #ffffff; 
     height: 72px; 
-    /* Volvemos al padding original para PC para que no se amontone */
     padding: 0 20px 0 160px; 
     box-sizing: border-box;
     width: 100%;
@@ -93,53 +94,36 @@
     color: #666;
   }
 
+  .menu-toggle, .config-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    transition: opacity 0.2s;
+  }
+
+  .menu-toggle:hover, .config-button:hover {
+    opacity: 0.7;
+  }
+
   .menu-toggle { 
     position: absolute; 
-    left: 105px; /* Posición cómoda en PC */
+    left: 105px; 
     top: 22px; 
     z-index: 20; 
-    background: none; 
-    border: none; 
-    font-size: 26px; 
-    cursor: pointer; 
   }
 
   .spacer { flex: 1; }
 
-  .config-button { 
-    background: none; 
-    border: none; 
-    padding: 8px; 
-    cursor: pointer; 
-    font-size: 20px;
-  }
-
-  /* --- AQUÍ ESTÁ LA MAGIA: SOLO PARA MÓVILES --- */
   @media (max-width: 600px) {
-    .header-top {
-        /* En móvil bajamos el espacio para que quepa todo */
-        padding: 0 10px 0 115px; 
-    }
-    
-    .header-logo {
-        width: 75px; /* Logo más estrecho solo en móvil */
-    }
-
-    .logo-text {
-        font-size: 35px;
-    }
-
-    .menu-toggle {
-        left: 82px; /* Pegado al logo estrecho */
-    }
-
-    .header-info h1 {
-        font-size: 1rem; /* Título ajustado al móvil */
-    }
-
-    .header-info p {
-        font-size: 0.7rem; /* Subtítulo muy pequeño para que no empuje */
-        white-space: nowrap;
-    }
+    .header-top { padding: 0 10px 0 115px; }
+    .header-logo { width: 75px; }
+    .logo-text { font-size: 35px; }
+    .menu-toggle { left: 82px; top: 24px; }
+    .header-info h1 { font-size: 1rem; }
+    .header-info p { font-size: 0.7rem; white-space: nowrap; }
   }
 </style>

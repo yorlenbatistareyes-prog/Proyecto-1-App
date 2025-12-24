@@ -1,35 +1,35 @@
 <script lang="ts">
   import { vistaActual } from '$lib/stores';
+  // Importamos los iconos de Lucide
+  import { House, Map, UsersRound, Briefcase, FileText } from 'lucide-svelte';
 </script>
 
-
 <nav class="barra-inferior">
-  <button class:activo={$vistaActual === 'inicio'} on:click={() => $vistaActual = 'inicio'}>
-    <img class="icono-nav" src="/icons/inicio.svg" alt="Inicio" />
+  <button class:activo={$vistaActual === 'inicio'} onclick={() => $vistaActual = 'inicio'}>
+    <House size={24} strokeWidth={$vistaActual === 'inicio' ? 2.5 : 2} />
     <span class="texto">Inicio</span>
   </button>
 
-  <button class:activo={$vistaActual === 'circuito'} on:click={() => $vistaActual = 'circuito'}>
-    <img class="icono-nav" src="/icons/circuitos.svg" alt="Circuito" />
+  <button class:activo={$vistaActual === 'circuito'} onclick={() => $vistaActual = 'circuito'}>
+    <Map size={24} strokeWidth={$vistaActual === 'circuito' ? 2.5 : 2} />
     <span class="texto">Circuito</span>
   </button>
 
-  <button class:activo={$vistaActual === 'congregaciones'} on:click={() => $vistaActual = 'congregaciones'}>
-    <img class="icono-nav" src="/icons/congregaciones.svg" alt="Congregaciones" />
+  <button class:activo={$vistaActual === 'congregaciones'} onclick={() => $vistaActual = 'congregaciones'}>
+    <UsersRound size={24} strokeWidth={$vistaActual === 'congregaciones' ? 2.5 : 2} />
     <span class="texto">Congregaciones</span>
   </button>
 
-  <button class:activo={$vistaActual === 'visitas'} on:click={() => $vistaActual = 'visitas'}>
-    <img class="icono-nav" src="/icons/visitas.svg" alt="Visitas" />
+  <button class:activo={$vistaActual === 'visitas'} onclick={() => $vistaActual = 'visitas'}>
+    <Briefcase size={24} strokeWidth={$vistaActual === 'visitas' ? 2.5 : 2} />
     <span class="texto">Visitas</span>
   </button>
 
-  <button class:activo={$vistaActual === 'informes'} on:click={() => $vistaActual = 'informes'}>
-    <img class="icono-nav" src="/icons/registros.svg" alt="Informes" />
+  <button class:activo={$vistaActual === 'informes'} onclick={() => $vistaActual = 'informes'}>
+    <FileText size={24} strokeWidth={$vistaActual === 'informes' ? 2.5 : 2} />
     <span class="texto">Informes</span>
   </button>
 </nav>
-
 
 <style>
   .barra-inferior {
@@ -53,28 +53,18 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    color: #666;
+    color: #666; /* Color gris por defecto para icono y texto */
     cursor: pointer;
     padding: 5px;
+    transition: color 0.2s ease;
   }  
 
   .barra-inferior button.activo {
-    color: #b63a3a; /* El color de tu marca */
-  }
-
-  .icono-nav {
-    width: 24px;
-    height: 24px;
-    opacity: 0.6;
-  }
-
-  .activo .icono-nav {
-    opacity: 1;
-    filter: invert(31%) sepia(54%) saturate(1450%) hue-rotate(338deg) brightness(85%) contrast(92%);
+    color: #b63a3a; /* Color rojo de tu marca aplicado a todo el botón */
   }
 
   .texto {
     font-size: 0.75rem;
+    font-weight: 500;
   }
 </style>
-

@@ -12,6 +12,9 @@
   import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento, mostrarToast } from '$lib/stores';
   import type { Circuito, Congregacion, Vista } from '$lib/types';
 
+  import { Settings, Menu, User, Trash2, Pencil, Plus, Save, X, Calendar, Search, CircleCheckBig 
+} from 'lucide-svelte';
+
   // 1. Lógica para el Modo Oscuro
   $effect(() => {
     if (typeof document !== 'undefined') {
@@ -803,25 +806,29 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
         
         <div class="tarea-info">
           <span class="tarea-texto" class:tachado={item.completada}>
-            {item.texto}
-          </span>
+  {#if item.completada}
+    <CircleCheckBig size={16} style="display: inline; color: #22c55e; margin-right: 4px; vertical-align: middle;" />
+  {/if}
+  {item.texto}
+</span>
           {#if item.fechaVencimiento}
-            <span class="badge-vencimiento">
-              📅 {new Date(item.fechaVencimiento).toLocaleString('es-ES', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-              })}
-            </span>
-          {/if}
+  <span class="badge-vencimiento">
+    <Calendar size={12} style="display: inline; margin-right: 4px; vertical-align: middle;" />
+    {new Date(item.fechaVencimiento).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })}
+  </span>
+{/if}
         </div>
       </div>
 
-      <button class="btn-borrar" onclick={() => eliminarTarea(item.id)}>
-        <img src="icons/borrar.svg" alt="Eliminar" class="icono-borrar" />
+      <button class="btn-borrar" onclick={() => eliminarTarea(item.id)} title="Eliminar tarea">
+        <Trash2 size={18} color="#ef4444" />
       </button>
     </li>
   {:else}
@@ -837,8 +844,8 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
     {#if !creandoCircuito}
       <div class="header-tabla">
-        <button class="btn-primario" onclick={prepararNuevoCircuito}>
-          + Nuevo circuito
+        <button class="btn-primario" onclick={prepararNuevoCircuito} style="display: flex; align-items: center; gap: 8px;">
+          <Plus size={18} /> Nuevo circuito
         </button>
       </div>
       
@@ -858,12 +865,12 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
               <td>{c.idioma}</td>
               <td>{c.pais}</td>
               <td class="celda-acciones"> 
-                <div class="grupo-botones">
-                  <button class="btn-tabla btn-editar" onclick={() => editarCircuito(c, index)}>
-                    Editar
+                <div class="grupo-botones" style="display: flex; gap: 8px;">
+                  <button class="btn-tabla btn-editar" onclick={() => editarCircuito(c, index)} style="display: flex; align-items: center; gap: 4px;">
+                    <Pencil size={14} /> Editar
                   </button>
-                  <button class="btn-tabla btn-eliminar" onclick={() => eliminarCircuito(index)}>
-                    Eliminar
+                  <button class="btn-tabla btn-eliminar" onclick={() => eliminarCircuito(index)} style="display: flex; align-items: center; gap: 4px;">
+                    <Trash2 size={14} /> Eliminar
                   </button>
                 </div>
               </td>
@@ -889,8 +896,8 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   <Panel titulo="Congregaciones">
     {#if !mostrarFormularioCongregacion}
       <div class="flex-end" style="margin-bottom: 15px;">
-        <button class="btn-primario" onclick={prepararNuevaCongregacion}>
-          ➕ Nueva
+        <button class="btn-primario" onclick={prepararNuevaCongregacion} style="display: flex; align-items: center; gap: 8px;">
+          <Plus size={18} /> Nueva
         </button>
       </div>
       
@@ -937,19 +944,20 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
       {#if menuAbiertoId === i}
   <div style="position: absolute; right: 10px; top: 40px; z-index: 100; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 140px; overflow: hidden;">
-    <button 
-      style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9;"
-      onclick={() => { editarCongregacion(c, i); cerrarMenu(); }}
-    >
-      ✏️ Editar
-    </button>
-    <button 
-      style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
-      onclick={() => { eliminarCongregacion(i); cerrarMenu(); }}
-    >
-      🗑️ Eliminar
-    </button>
-  </div>
+  <button 
+    style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; color: #475569;"
+    onclick={() => { editarCongregacion(c, i); cerrarMenu(); }}
+  >
+    <Pencil size={14} /> Editar
+  </button>
+  
+  <button 
+    style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
+    onclick={() => { eliminarCongregacion(i); cerrarMenu(); }}
+  >
+    <Trash2 size={14} /> Eliminar
+  </button>
+</div>
 {/if}
     </td>
         </tr>
@@ -1067,18 +1075,21 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
             <option value="pdf">Formato PDF (.pdf)</option>
           </select>
         </div>
-        <button class="btn-primario" onclick={() => creandoVisita = true}>
-          📝 Registrar Nueva Visita
-        </button>
-      </div> 
+          <button class="btn-primario" onclick={() => creandoVisita = true} style="display: inline-flex; align-items: center; gap: 8px;">
+            <Plus size={18} /> Registrar Nueva Visita
+          </button>
+        </div> 
 
       <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-        <input 
-          type="text" 
-          placeholder="🔎 Buscar congregación..." 
-          bind:value={textoBusquedaVisitas}
-          style="flex: 2; min-width: 180px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;"
-        />
+        <div style="position: relative; flex: 2; min-width: 180px;">
+          <Search size={18} style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #64748b;" />
+          <input 
+            type="text" 
+            placeholder="Buscar congregación..." 
+            bind:value={textoBusquedaVisitas}
+            style="width: 100%; padding: 8px 8px 8px 35px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;"
+          />
+          </div>
 
         <select bind:value={filtroMes} style="flex: 1; min-width: 130px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; cursor: pointer;">
           <option value="Todos">📅 Mes: Todos</option>
@@ -1098,7 +1109,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
           onclick={() => { filtroMes = "Todos"; filtroAnio = "Todos"; textoBusquedaVisitas = ""; }}
           style="padding: 8px 12px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; color: #475569; font-weight: bold;"
         >
-          RESET ❌
+          🔄 RESET
         </button>
       </div>
 
@@ -1669,9 +1680,9 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   <div style="margin-bottom: 15px; background: #f9f7ff; padding: 12px; border-radius: 6px; border: 1px dashed #d6bcfa;">
     <label style="font-size: 0.9rem; font-weight: bold; color: #553c9a; display: block; margin-bottom: 8px;">Estado general de hábitos espirituales:</label>
     <div style="display: flex; gap: 15px;">
-        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="buenos" /> Buenos / Ejemplares</label>
-        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="mejorables" /> Necesitan mejora</label>
-        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="preocupantes" /> Hay tendencias negativas</label>
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="buenos" /> Buenos / Ejempl</label>
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="mejorables" /> Nec. mejora</label>
+        <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="preocupantes" /> Tend negativ.</label>
     </div>
   </div>
 
@@ -2106,7 +2117,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   <div class="seccion-form-bloque" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-top: 20px; background-color: #fdf2f2;">
   <div class="subtitulo-form" style="font-weight: bold; color: #9b2c2c; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 2px solid #e53e3e; display: inline-block;">
-    2. SUGERENCIAS SOBRE REUNIONES (Observaciones de la semana)
+    16. SUGERENCIAS SOBRE REUNIONES (Observaciones de la semana)
   </div>
 
   <button 
@@ -2285,6 +2296,11 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 </main>
  
 <style>
+  :global(html, body) {
+  overflow-x: hidden; /* Prohibido el scroll horizontal en toda la app */
+  width: 100%;
+  position: relative;
+}
   :global(body) { font-family: "Segoe UI", sans-serif; margin: 0; background-color: #f5f5f5; }
   main { padding: 15px; padding-bottom: 80px; max-width: 1200px; margin: 0 auto; }
   .acciones { display: flex; gap: 10px; margin-bottom: 15px; }
@@ -2298,7 +2314,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   background: white;
   position: relative;
 }
-  .tabla-profesional { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 1200px; }
+  .tabla-profesional { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 700px; }
   .tabla-profesional th { background-color: #ffffff; color: #333; font-weight: 600; text-align: left; padding: 12px 15px; border-bottom: 2px solid #edf2f7; }
   .tabla-profesional td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #4a5568; }
 
@@ -2333,12 +2349,33 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   .btn-primario { background: #5b4cc4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
   .btn-secundario { background: #f0f0f0; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-  .form-grande { background: white; padding: 20px; border-radius: 8px; }
-  .fila { display: flex; gap: 15px; margin-bottom: 20px; }
-  .campo { flex: 1; display: flex; flex-direction: column; }
-  .campo input, .select-estilizado { padding: 8px; border: none; border-bottom: 1px solid #ccc; background: #fafafa; }
-  .fila-reunion { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f9f9f9; padding: 15px; }
-  .time-wrapper { display: flex; gap: 5px; }
+  .form-grande { 
+  background: white; 
+  padding: 20px; 
+  border-radius: 8px; 
+  width: 100%;       /* Ocupa el ancho disponible */
+  box-sizing: border-box; /* Incluye el padding en el cálculo del ancho */
+  overflow-x: hidden; /* Evita que el formulario mismo cree scroll horizontal */
+}
+  .fila { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+  .campo { flex: 1 1 200px; display: flex; flex-direction: column; min-width: 0; }
+  .campo input, .select-estilizado, textarea { width: 100%; box-sizing: border-box; padding: 8px; border: none; border-bottom: 1px solid #ccc; background: #fafafa; }
+  .fila-reunion { 
+  display: grid; 
+  /* 'auto-fit' hará que si no caben dos columnas de 250px, se pongan una debajo de otra */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+  gap: 15px; 
+  background: #f9f9f9; 
+  padding: 15px; 
+  border-radius: 8px; /* Un toque estético */
+}
+  /* Forzamos que los inputs de hora no empujen el ancho */
+.time-wrapper { 
+  display: flex; 
+  gap: 5px; 
+  flex-wrap: wrap; /* Si el label y el input no caben, se envuelven */
+}
+
   .acciones-inferiores { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
   .input-buscador { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
 
@@ -2423,6 +2460,9 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     padding: 4px 8px;
     font-family: monospace;
     outline-color: #3182ce;
+    /* --- AQUÍ AÑADIMOS EL CONTROL DE ANCHO --- */
+    max-width: 100px; 
+    width: 100%; /* Para que intente ser pequeño pero se ajuste si el padre es menor */
   }
 
   /* Mejora de los labels de los días */
@@ -2432,7 +2472,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   .config-container {
     padding: 20px;
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     padding-bottom: 100px;
   }
@@ -2448,8 +2488,13 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   }
 
   .config-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-wrap: break-word; /* Si hay un título muy largo, lo rompe para que no empuje */
     background: white;
-    padding: 20px;
+    padding: 15px !important;
+    margin-bottom: 10px;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -2489,7 +2534,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     color: #dc2626;
     border: 1px solid #fca5a5;
     padding: 10px;
-    width: 100%;
+    width: 90%;
     border-radius: 8px;
     cursor: pointer;
     margin-top: 10px;
@@ -2596,7 +2641,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   /* Ajuste para que la tabla ocupe todo el ancho */
   .tabla {
-    width: 100%;
+    width: 90%;
     border-collapse: collapse;
     margin-top: 10px;
   }
@@ -2618,7 +2663,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   /* Tabla Estilizada */
   .tabla-estilizada {
-    width: 100%;
+    width: 90%;
     border-collapse: collapse;
     background: white;
   }
@@ -2715,7 +2760,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     flex-direction: row !important;
     gap: 12px !important;
     align-items: center !important;
-    width: 100% !important;
+    width: 90% !important;
     margin-bottom: 25px;
   }
 
@@ -2828,17 +2873,15 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   /* FUERZA BRUTA PARA EL DISEÑO DE LA AGENDA */
   .agenda-layout-grid {
-    display: grid !important;
-    grid-template-columns: 1fr auto auto !important; /* El 1fr hace que el primero sea largo */
-    gap: 12px !important;
-    align-items: center !important;
+    display: flex !important;
+    flex-wrap: wrap !important; /* Permite que los elementos bajen en móvil */
+    gap: 10px !important;
     width: 100% !important;
-    max-width: 100% !important;
     margin-bottom: 25px !important;
   }
 
   .agenda-input-texto {
-    width: 100% !important; /* Ahora sí usará todo el espacio del 1fr */
+    flex: 1 1 100% !important; /* Ocupa toda la fila en móvil */
     height: 46px !important;
     border: 1px solid #d1d5db !important;
     border-radius: 10px !important;
@@ -2848,7 +2891,7 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   }
 
   .agenda-input-fecha {
-    width: 220px !important; /* Tamaño fijo para que no se desproporcione */
+    flex: 1 1 45% !important; /* Dos por fila en móvil (Fecha y Botón) */
     height: 46px !important;
     border: 1px solid #d1d5db !important;
     border-radius: 10px !important;
@@ -2857,15 +2900,14 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   }
 
   .agenda-btn-add {
+    flex: 1 1 45% !important; /* Dos por fila en móvil junto a la fecha */
     height: 46px !important;
-    padding: 0 25px !important;
-    background-color: #b63a3a !important; /* El rojo de tu logo */
+    background-color: #b63a3a !important;
     color: white !important;
     border: none !important;
     border-radius: 10px !important;
     font-weight: bold !important;
     cursor: pointer !important;
-    white-space: nowrap !important;
   }
 
   .agenda-btn-add:hover {
@@ -2958,4 +3000,76 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     text-align: right;
     padding-right: 20px;
   }
+  .contenedor {
+    display: grid;
+    grid-template-columns: 1fr; /* Una columna en móvil */
+  }
+
+  /* Tablets y pantallas medianas (768px en adelante) */
+  @media (min-width: 768px) {
+    .contenedor {
+      grid-template-columns: 1fr 1fr; /* Dos columnas */
+    }
+
+    /* Añadimos aquí lo de la agenda para que se ponga en fila en tablets/PC */
+    .agenda-input-texto { flex: 1 !important; }
+    .agenda-input-fecha { flex: 0 0 220px !important; }
+    .agenda-btn-add { flex: 0 0 auto !important; }
+  }
+
+  /* Computadoras (1024px en adelante) */
+  @media (min-width: 1024px) {
+    .contenedor {
+      grid-template-columns: 1fr 1fr 1fr 1fr; /* Cuatro columnas */
+    }
+  }
+
+  /* --- AJUSTE DE PRECISIÓN: MÓDULO 7 Y DÍAS --- */
+@media (max-width: 600px) {
+
+  /* 1. MÓDULO 7: Solo los textos largos de los círculos (radios) */
+  /* Usamos un selector que solo afecte a las opciones que tienen texto largo */
+  .config-card label:has(input[type="radio"]) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    white-space: normal !important; /* Permite que el texto baje de línea */
+    margin-bottom: 12px !important;
+  }
+
+  /* 2. DÍAS DE LA SEMANA: Solo para los cuadritos (checkboxes) */
+  /* Buscamos el contenedor que tiene muchos checkboxes juntos (los días) */
+  .config-card div:has(> label > input[type="checkbox"]) {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* Dos columnas: Lun | Mar */
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  /* 3. PROTECCIÓN: Evitamos que los módulos se pongan uno al lado del otro */
+  /* Forzamos a que cada tarjeta ocupe su propia línea siempre */
+  .config-card, section, .form-grande {
+    display: block !important; 
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 10px 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4. TAMAÑO DE BOTONES: Que no se estiren */
+  input[type="radio"], input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    flex-shrink: 0 !important;
+    margin-right: 8px !important;
+  }
+
+  /* 5. CAMPOS DE TEXTO: Que se ajusten al ancho de su tarjeta */
+  input:not([type="radio"]):not([type="checkbox"]), select, textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+}
 </style>
