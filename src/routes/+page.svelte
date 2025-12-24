@@ -4,43 +4,48 @@
   import { jsPDF } from 'jspdf';
   import autoTable from 'jspdf-autotable';
   
-  // Componentes
   import Panel from '$lib/components/Panel.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
-  import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento } from '$lib/stores';
+  import Toast from '$lib/components/Toast.svelte';
+  import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento, mostrarToast } from '$lib/stores';
   import type { Circuito, Congregacion, Vista } from '$lib/types';
 
-  // Lógica reactiva para el Modo Oscuro
-  $: if (typeof document !== 'undefined') {
-    document.body.classList.toggle('dark-mode', $temaOscuro);
-  }
+  // 1. Lógica para el Modo Oscuro
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      document.body.classList.toggle('dark-mode', $temaOscuro);
+    }
+  });
 
-  // Variables para las estadísticas
-  let statsMes = { total: 0, congreDistintas: 0, promedioPorSemana: 0 };
+  // --- LÓGICA DE INFORMES (Ajuste 2) ---
+  let visitasMesActual: any[] = [];
+  let statsMes = { total: 0, congreDistintas: 0, promedioPorSemana: "0" };
 
-  // Función para calcular estadísticas automáticamente
-  $: {
+  function calcularEstadisticas(todasLasVisitas: any[]) {
     const ahora = new Date();
-    const mesActual = ahora.getMonth();
-    const añoActual = ahora.getFullYear();
+    const mes = ahora.getMonth();
+    const anio = ahora.getFullYear();
 
-    const visitasDelMes = $visitasStore.filter(v => {
-      const fechaV = new Date(v.fecha);
-      return fechaV.getMonth() === mesActual && fechaV.getFullYear() === añoActual;
+    visitasMesActual = todasLasVisitas.filter(v => {
+      if (!v || !v.fecha) return false;
+      const f = new Date(v.fecha + 'T00:00:00');
+      return f.getMonth() === mes && f.getFullYear() === anio;
     });
 
-    const congreUnicas = new Set(visitasDelMes.map(v => v.congregacionId));
-
     statsMes = {
-      total: visitasDelMes.length,
-      congreDistintas: congreUnicas.size,
-      promedioPorSemana: (visitasDelMes.length / 4).toFixed(1)
+      total: visitasMesActual.length,
+      congreDistintas: new Set(visitasMesActual.map(v => v.congregacionId)).size,
+      promedioPorSemana: (visitasMesActual.length / 4).toFixed(1)
     };
   }
 
-  let menuAbiertoId: number | null = null;
+  $effect(() => {
+    calcularEstadisticas($visitasStore);
+  });
+
+  let menuAbiertoId = $state(null);
  
   function toggleMenu(index: number) {
     menuAbiertoId = menuAbiertoId === index ? null : index;
@@ -50,21 +55,90 @@
     menuAbiertoId = null;
   }
  
-  /* LÓGICA: INICIO */
-  let seccionInicio: 'registros' | 'pendientes' = 'registros';
-  // Esta variable ahora será "reactiva" (se actualiza sola cuando cambias 'visitas')
-  $: visitasRecientes = $visitasStore
-    .slice(-5) // Toma solo las últimas 5 visitas
-    .reverse() // Pon la más reciente arriba
-    .map(v => ({
-      fecha: v.fecha,
-      congregacion: v.congregacionId
-    }));
+  /* LÓGICA: INICIO / AGENDA */
+  let seccionInicio = $state<'registros' | 'pendientes'>('registros'); 
+  
+  let nuevaTareaTexto = $state(''); 
+  let nuevaTareaFecha = $state(''); // Valor del input datetime-local
 
-  let asuntosPendientes = [{ id: 1, texto: 'Visita pendiente a Congregación Norte' }];
- 
+  // 1. Ajustamos el tipo para permitir null
+  let tareas = $state<{
+    id: number, 
+    texto: string, 
+    completada: boolean, 
+    fechaVencimiento: string | null // Cambiado de opcional a string o null
+  }[]>([]); 
+
+  // Esta variable se actualizará sola cada vez que cambie 'tareas'
+  let tareasOrdenadas = $derived([...tareas].sort((a, b) => {
+  return a.completada === b.completada ? 0 : a.completada ? 1 : -1;
+}));
+
+let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
+
+  function agregarTarea() {
+    if (nuevaTareaTexto.trim() !== '') {
+      // 2. CORRECCIÓN: Si el input está vacío, guardamos null para evitar "Invalid Date"
+      const fechaValida = nuevaTareaFecha ? nuevaTareaFecha : null;
+
+      const nueva = { 
+        id: Date.now(), 
+        texto: nuevaTareaTexto, 
+        fechaVencimiento: fechaValida, 
+        completada: false 
+      };
+      
+      const listaActualizada = [...tareas, nueva];
+
+      // 3. Orden dinámico protegiendo nulos
+      tareas = listaActualizada.sort((a, b) => {
+        if (!a.fechaVencimiento) return 1;
+        if (!b.fechaVencimiento) return -1;
+        return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime();
+      });
+
+      nuevaTareaTexto = ''; 
+      nuevaTareaFecha = '';
+    }
+  }
+
+  function eliminarTarea(id: number) {
+    tareas = tareas.filter(t => t.id !== id);
+  }
+
+  onMount(() => {
+    const backup = localStorage.getItem('agenda_av');
+    if (backup) {
+      try { 
+        const datos = JSON.parse(backup);
+        // Aseguramos que los datos viejos sin fecha no rompan nada
+        tareas = datos.map((t: any) => ({
+          ...t,
+          fechaVencimiento: t.fechaVencimiento || null
+        }));
+      } catch (e) { 
+        console.error("Error al cargar agenda:", e); 
+      }
+    }
+  });
+
+  $effect(() => {
+    localStorage.setItem('agenda_av', JSON.stringify(tareas));
+  });
+
+  // Lógica de Visitas Recientes
+  let visitasRecientes = $derived(
+    $visitasStore
+      .slice(-5) 
+      .reverse() 
+      .map(v => ({
+        fecha: v.fecha,
+        congregacion: v.congregacionId
+      }))
+  );
+
   /* LÓGICA: CIRCUITOS */
-  let creandoCircuito = false;
+  let creandoCircuito = $state(false);
   let indiceCircuitoEditando: number | null = null;
   let nuevoCircuito: Circuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
  
@@ -89,16 +163,18 @@
       $circuitos = [...$circuitos];
     }
     creandoCircuito = false;
+    mostrarToast("✅ Circuito guardado correctamente");
   }
  
   function eliminarCircuito(index: number) {
     if (confirm('¿Eliminar este circuito?')) {
       $circuitos = $circuitos.filter((_, i) => i !== index);
+      mostrarToast("🗑️ Registro eliminado", "error");
     }
   }
  
   /* LÓGICA: CONGREGACIONES */
-  let mostrarFormularioCongregacion = false;
+  let mostrarFormularioCongregacion = $state(false);
   let indiceCongregacionEditando: number | null = null;
   
   const moldeCongregacion: Congregacion = {
@@ -111,12 +187,16 @@
     // Eliminados: idiomaFormulario y enlaceJw
   };
   
-  let nuevaCongregacion: Congregacion = { ...moldeCongregacion };
-  let textoBusqueda = '';
- 
-  $: congregacionesFiltradas = $congregaciones.filter(c => 
-    c.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
-    c.ciudad.toLowerCase().includes(textoBusqueda.toLowerCase())
+  // 1. Nueva forma de declarar la congregación y la búsqueda
+  let nuevaCongregacion = $state({ ...moldeCongregacion });
+  let textoBusqueda = $state('');
+
+  // 2. Cálculo derivado (reemplaza a $: )
+  let congregacionesFiltradas = $derived(
+    $congregaciones.filter(c => 
+      c.nombre.toLowerCase().includes(textoBusqueda.toLowerCase()) ||
+      c.ciudad.toLowerCase().includes(textoBusqueda.toLowerCase())
+    )
   );
  
   function prepararNuevaCongregacion() {
@@ -143,12 +223,17 @@
       $congregaciones[indiceCongregacionEditando] = { ...nuevaCongregacion };
       $congregaciones = [...$congregaciones];
     }
-    mostrarFormularioCongregacion = false;
+   // Cerramos el formulario y mostramos el aviso
+    mostrarFormularioCongregacion = false; 
+    mostrarToast("✅ Congregación guardada con éxito"); //
   }
  
   function eliminarCongregacion(index: number) {
     if (confirm('¿Eliminar esta congregación?')) {
       $congregaciones = $congregaciones.filter((_, i) => i !== index);
+      
+      // Mostramos el aviso en rojo (tipo error)
+      mostrarToast("🗑️ Congregación eliminada", "error"); //
     }
   }
 
@@ -214,30 +299,30 @@
   }
 
   /* LÓGICA: VISITAS */
-  let creandoVisita = false;
-  let mostrarPreguntas = false;
+  let creandoVisita = $state(false);
+  let mostrarPreguntas = $state(false);
   const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   // Inicializamos con un array vacío para evitar errores de "undefined"
-  let mostrarPreguntasTerritorio = false;
-  let mostrarPreguntasPrecursores = false;
-  let mostrarPreguntasReuniones = false;
-  let mostrarPreguntasPastoreo = false;
-  let mostrarPreguntasCrecimiento = false;
-  let mostrarPreguntasSuperServicio = false;
-  let mostrarPreguntasPublicaciones = false;
-  let mostrarPreguntasProgreso = false;
-  let mostrarPreguntasAncianos = false;
-  let mostrarPreguntasLocal = false;
-  let mostrarPreguntasInactivos = false;
-  let mostrarPreguntasDetallePrecursores = false;
-  let mostrarPreguntasContabilidad = false;
-  let mostrarPreguntasProblemas = false;
-  let mostrarPreguntasMiscelaneos = false;
-  let mostrarPreguntasDiscursos = false;
-  let mostrarSugerenciasReuniones = false;
+  let mostrarPreguntasTerritorio = $state(false);
+  let mostrarPreguntasPrecursores = $state(false);
+  let mostrarPreguntasReuniones = $state(false);
+  let mostrarPreguntasPastoreo = $state(false);
+  let mostrarPreguntasCrecimiento = $state(false);
+  let mostrarPreguntasSuperServicio = $state(false);
+  let mostrarPreguntasPublicaciones = $state(false);
+  let mostrarPreguntasProgreso = $state(false);
+  let mostrarPreguntasAncianos = $state(false);
+  let mostrarPreguntasLocal = $state(false);
+  let mostrarPreguntasInactivos = $state(false);
+  let mostrarPreguntasDetallePrecursores = $state(false);
+  let mostrarPreguntasContabilidad = $state(false);
+  let mostrarPreguntasProblemas = $state(false);
+  let mostrarPreguntasMiscelaneos = $state(false);
+  let mostrarPreguntasDiscursos = $state(false);
+  let mostrarSugerenciasReuniones = $state(false);
   
 
-  let nuevaVisita = {
+  let nuevaVisita = $state({
     fecha: '',
     congregacionId: '',
     tipo: 'Ordinaria',
@@ -329,7 +414,7 @@
       }
     },
     observacionesFinales: ''
-  };
+  });
 
   function guardarVisita() {
     // 1. Validación de seguridad
@@ -337,23 +422,27 @@
       alert("Por favor, seleccione la congregación y la fecha.");
       return;
     }
-
+// 2. Guardado en el Store
     const visitaGuardada = { ...nuevaVisita, id: Date.now() };
     $visitasStore = [...$visitasStore, visitaGuardada];
 
-    if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
-      const nuevoPendiente = {
+    // 3. Lógica de Asuntos Pendientes (Integración con la Agenda)
+if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
+    const nuevoPendiente = {
         id: Date.now() + 1,
-        texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`
-      };
-      asuntosPendientes = [...asuntosPendientes, nuevoPendiente];
-    }
-
+        texto: `De ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`,
+        completada: false,
+        fechaVencimiento: null // Añadimos esto para que coincida con tu interfaz de tareas
+    };
+    tareas = [...tareas, nuevoPendiente];
+}
+// 4. Generación automática de PDF
     generarPDFIndividual(nuevaVisita);
 
-    alert("¡Registro guardado y PDF generado con éxito!");
-    creandoVisita = false;
+   // 5. CIERRE Y NOTIFICACIÓN (Sustituye al alert antiguo)
+    creandoVisita = false; // Mantenemos tu variable 'creandoVisita' si así se llama en tu código
     resetearFormulario();
+    mostrarToast("✅ Visita guardada y PDF generado con éxito");
   }
 
   function resetearFormulario() {
@@ -532,37 +621,40 @@
     if (index !== -1) {
       nuevaVisita.ministerio.programa = programa.filter(p => p.dia !== dia);
     } else {
-      nuevaVisita.ministerio.programa = [...programa, { dia: dia, hora: '' }];
-    }
-    nuevaVisita = nuevaVisita; 
+      nuevaVisita.ministerio.programa.push({ dia: dia, hora: '' });
   }
+}
 
   let textoBusquedaVisitas = '';
 
-  /* --- COPIAR DESDE AQUÍ --- */
-  let filtroMes = "Todos";
-  let filtroAnio = "Todos";
+/* --- COPIAR DESDE AQUÍ --- */
+  let filtroMes = $state("Todos");
+  let filtroAnio = $state("Todos");
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-  $: anios = [
+  
+  let anios = $derived([
     ...new Set([
       new Date().getFullYear().toString(), 
       ...$visitasStore.map(v => new Date(v.fecha + 'T00:00:00').getFullYear().toString())
     ])
-  ].sort();
+  ].sort());
 
-  $: visitasFiltradas = $visitasStore.filter(v => {
-    const coincideTexto = v.congregacionId.toLowerCase().includes(textoBusquedaVisitas.toLowerCase()) || 
-                         v.tipo.toLowerCase().includes(textoBusquedaVisitas.toLowerCase());
-    
-    const fechaObj = new Date(v.fecha + 'T00:00:00');
-    const mesVisita = fechaObj.getMonth(); 
-    const coincideMes = filtroMes === "Todos" || meses[mesVisita] === filtroMes;
+  // CORRECCIÓN: Cambiamos $: por $derived
+  let visitasFiltradas = $derived(
+    $visitasStore.filter(v => {
+      const coincideTexto = v.congregacionId.toLowerCase().includes(textoBusquedaVisitas.toLowerCase()) || 
+                           v.tipo.toLowerCase().includes(textoBusquedaVisitas.toLowerCase());
+      
+      const fechaObj = new Date(v.fecha + 'T00:00:00');
+      const mesVisita = fechaObj.getMonth(); 
+      const coincideMes = filtroMes === "Todos" || meses[mesVisita] === filtroMes;
 
-    const anioVisita = fechaObj.getFullYear().toString();
-    const coincideAnio = filtroAnio === "Todos" || anioVisita === filtroAnio;
+      const anioVisita = fechaObj.getFullYear().toString();
+      const coincideAnio = filtroAnio === "Todos" || anioVisita === filtroAnio;
 
-    return coincideTexto && coincideMes && coincideAnio;
-  }).reverse();
+      return coincideTexto && coincideMes && coincideAnio;
+    }).reverse()
+  );
 
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
@@ -643,39 +735,109 @@
 <Sidebar />
 <Header />
 <BottomNav />
+<Toast />
  
 <main>
-  {#if $vistaActual === 'inicio'}
-    <div class="acciones">
-      <button class:activo={seccionInicio === 'registros'} on:click={() => seccionInicio = 'registros'}>Visitas</button>
-      <button class:activo={seccionInicio === 'pendientes'} on:click={() => seccionInicio = 'pendientes'}>Pendientes</button>
-    </div>
-    <Panel titulo={seccionInicio === 'registros' ? "Visitas recientes" : "Asuntos pendientes"}>
-  <ul>
+ {#if $vistaActual === 'inicio'}
+  <div class="acciones">
+    <button 
+      class:activo={seccionInicio === 'registros'} 
+      onclick={() => seccionInicio = 'registros'}
+    >
+      Visitas
+    </button>
+    
+    <button 
+      class:activo={seccionInicio === 'pendientes'} 
+      onclick={() => seccionInicio = 'pendientes'}
+    >
+      Pendientes
+      {#if totalPendientes > 0}
+        <span class="badge-alerta">{totalPendientes}</span>
+      {/if}
+    </button>
+  </div>
+
+  <Panel titulo={seccionInicio === 'registros' ? "Visitas recientes" : "Agenda de asuntos"}>
     {#if seccionInicio === 'registros'}
-      {#each visitasRecientes as item}
-        <li>
-          <strong>{item.fecha}:</strong> {item.congregacion}
-        </li>
-      {:else}
-        <li style="color: #999;">No hay visitas registradas aún.</li>
-      {/each}
+      <ul class="lista-recientes">
+        {#each visitasRecientes as item}
+          <li>
+            <span class="fecha-v">{item.fecha}:</span> 
+            <span class="cong-v">{item.congregacion}</span>
+          </li>
+        {:else}
+          <li class="vacio">No hay visitas registradas aún.</li>
+        {/each}
+      </ul>
     {:else}
-      {#each asuntosPendientes as item}
-        <li>{item.texto}</li>
-      {:else}
-        <li style="color: #999;">No hay pendientes.</li>
-      {/each}
+      <div class="agenda-wrapper">
+  <div class="agenda-layout-grid">
+    <input 
+      type="text" 
+      class="agenda-input-texto"
+      bind:value={nuevaTareaTexto} 
+      placeholder="¿Qué hay que hacer?" 
+      onkeydown={(e) => e.key === 'Enter' && agregarTarea()}
+    />
+    
+    <input 
+      type="datetime-local" 
+      class="agenda-input-fecha"
+      bind:value={nuevaTareaFecha}
+    />
+
+    <button class="agenda-btn-add" onclick={agregarTarea}>
+      Añadir
+    </button>
+  </div>
+
+        <ul class="lista-tareas">
+  {#each tareasOrdenadas as item (item.id)}
+    <li class="tarea-card" class:completada={item.completada}>
+      <div class="tarea-main">
+        <label class="check-container">
+          <input type="checkbox" bind:checked={item.completada} />
+          <span class="checkmark"></span>
+        </label>
+        
+        <div class="tarea-info">
+          <span class="tarea-texto" class:tachado={item.completada}>
+            {item.texto}
+          </span>
+          {#if item.fechaVencimiento}
+            <span class="badge-vencimiento">
+              📅 {new Date(item.fechaVencimiento).toLocaleString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}
+            </span>
+          {/if}
+        </div>
+      </div>
+
+      <button class="btn-borrar" onclick={() => eliminarTarea(item.id)}>
+        <img src="icons/borrar.svg" alt="Eliminar" class="icono-borrar" />
+      </button>
+    </li>
+  {:else}
+    <li class="vacio">No hay pendientes.</li>
+  {/each}
+</ul>
+      </div>
     {/if}
-  </ul>
-</Panel>
-  {/if}
+  </Panel>
+{/if}
  
   {#if $vistaActual === 'circuito'}
   <Panel titulo={creandoCircuito ? "Datos del Circuito" : "Circuitos"}>
     {#if !creandoCircuito}
       <div class="header-tabla">
-        <button class="btn-primario" on:click={prepararNuevoCircuito}>
+        <button class="btn-primario" onclick={prepararNuevoCircuito}>
           + Nuevo circuito
         </button>
       </div>
@@ -697,10 +859,10 @@
               <td>{c.pais}</td>
               <td class="celda-acciones"> 
                 <div class="grupo-botones">
-                  <button class="btn-tabla btn-editar" on:click={() => editarCircuito(c, index)}>
+                  <button class="btn-tabla btn-editar" onclick={() => editarCircuito(c, index)}>
                     Editar
                   </button>
-                  <button class="btn-tabla btn-eliminar" on:click={() => eliminarCircuito(index)}>
+                  <button class="btn-tabla btn-eliminar" onclick={() => eliminarCircuito(index)}>
                     Eliminar
                   </button>
                 </div>
@@ -715,8 +877,8 @@
         <div class="campo"><label>Idioma</label><input bind:value={nuevoCircuito.idioma} /></div>
         <div class="campo"><label>País</label><input bind:value={nuevoCircuito.pais} /></div>
         <div class="acciones-inferiores">
-          <button class="btn-secundario" on:click={() => creandoCircuito = false}>Cancelar</button>
-          <button class="btn-primario" on:click={guardarCircuito}>Guardar</button>
+          <button class="btn-secundario" onclick={() => creandoCircuito = false}>Cancelar</button>
+          <button class="btn-primario" onclick={guardarCircuito}>Guardar</button>
         </div>
       </div>
     {/if}
@@ -727,7 +889,7 @@
   <Panel titulo="Congregaciones">
     {#if !mostrarFormularioCongregacion}
       <div class="flex-end" style="margin-bottom: 15px;">
-        <button class="btn-primario" on:click={prepararNuevaCongregacion}>
+        <button class="btn-primario" onclick={prepararNuevaCongregacion}>
           ➕ Nueva
         </button>
       </div>
@@ -764,39 +926,31 @@
           <td style="padding: 10px; font-size: 0.85rem;">{c.reunionFinSemana} {c.horaFinSemana}</td>
           <td style="padding: 10px; text-align: center; position: relative;">
       <button 
-        class="btn-tabla-accion" 
-        on:click|stopPropagation={() => toggleMenu(i)}
-      >
-        ACCIONES
-      </button>
+  class="btn-tabla-accion" 
+  onclick={(e) => { 
+    e.stopPropagation(); 
+    toggleMenu(i); 
+  }}
+>
+  ACCIONES
+</button>
 
       {#if menuAbiertoId === i}
-        <div style="
-          position: absolute; 
-          right: 10px; 
-          top: 40px; 
-          z-index: 100; 
-          background: white; 
-          border: 1px solid #e2e8f0; 
-          border-radius: 8px; 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-          min-width: 140px;
-          overflow: hidden;
-        ">
-          <button 
-            style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9;"
-            on:click={() => { editarCongregacion(c, i); cerrarMenu(); }}
-          >
-            ✏️ Editar
-          </button>
-          <button 
-            style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
-            on:click={() => { eliminarCongregacion(i); cerrarMenu(); }}
-          >
-            🗑️ Eliminar
-          </button>
-        </div>
-      {/if}
+  <div style="position: absolute; right: 10px; top: 40px; z-index: 100; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 140px; overflow: hidden;">
+    <button 
+      style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9;"
+      onclick={() => { editarCongregacion(c, i); cerrarMenu(); }}
+    >
+      ✏️ Editar
+    </button>
+    <button 
+      style="display: block; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
+      onclick={() => { eliminarCongregacion(i); cerrarMenu(); }}
+    >
+      🗑️ Eliminar
+    </button>
+  </div>
+{/if}
     </td>
         </tr>
       {/each}
@@ -888,8 +1042,8 @@
         </div>
 
         <div class="acciones-inferiores">
-          <button class="btn-secundario" on:click={() => mostrarFormularioCongregacion = false}>Cancelar</button>
-          <button class="btn-primario" on:click={guardarCongregacion}>Guardar</button>
+          <button class="btn-secundario" onclick={() => mostrarFormularioCongregacion = false}>Cancelar</button>
+          <button class="btn-primario" onclick={guardarCongregacion}>Guardar</button>
         </div>
       </div>
     {/if}
@@ -901,19 +1055,19 @@
     {#if !creandoVisita}
       <div class="flex-end" style="gap: 10px; margin-bottom: 20px;">
         <div class="grupo-exportar">
-          <select 
-            class="select-exportar" 
-            on:change={(e) => {
-              const v = e.currentTarget.value;
-              if (v === 'csv' || v === 'pdf') exportarDatos(v as 'csv' | 'pdf');
-            }}
-          >
+  <select 
+    class="select-exportar" 
+    onchange={(e) => {
+      const v = e.currentTarget.value;
+      if (v === 'csv' || v === 'pdf') exportarDatos(v as 'csv' | 'pdf');
+    }}
+  >
             <option value="" selected disabled>📥 Exportar informe...</option>
             <option value="csv">Formato CSV</option>
             <option value="pdf">Formato PDF (.pdf)</option>
           </select>
         </div>
-        <button class="btn-primario" on:click={() => creandoVisita = true}>
+        <button class="btn-primario" onclick={() => creandoVisita = true}>
           📝 Registrar Nueva Visita
         </button>
       </div> 
@@ -941,7 +1095,7 @@
         </select>
 
         <button 
-          on:click={() => { filtroMes = "Todos"; filtroAnio = "Todos"; textoBusquedaVisitas = ""; }}
+          onclick={() => { filtroMes = "Todos"; filtroAnio = "Todos"; textoBusquedaVisitas = ""; }}
           style="padding: 8px 12px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; color: #475569; font-weight: bold;"
         >
           RESET ❌
@@ -969,14 +1123,14 @@
               <button 
                 class="btn-tabla-accion" 
                 style="padding: 4px 6px; cursor: pointer; border: 1px solid #d1d5db; background: white; border-radius: 4px; font-size: 0.75rem; font-weight: bold; white-space: nowrap;"
-                on:click={() => cargarVisitaParaVer(v)}
+                onclick={() => cargarVisitaParaVer(v)}
               >
                 VER INFORME
               </button>
               <button 
                 type="button"
                 style="padding: 4px 6px; cursor: pointer; background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; font-size: 0.75rem; white-space: nowrap;"
-                on:click={() => eliminarVisita(v.id)}
+                onclick={() => eliminarVisita(v.id)}
               >
                 ELIMINAR
               </button>
@@ -1026,7 +1180,7 @@
           <button 
             type="button" 
             style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030;"
-            on:click={() => mostrarPreguntas = !mostrarPreguntas}
+            onclick={() => mostrarPreguntas = !mostrarPreguntas}
           >
             {mostrarPreguntas ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
           </button>
@@ -1092,7 +1246,7 @@
               {@const programaDia = nuevaVisita.ministerio.programa.find(p => p.dia === dia)}
               <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; border: 1px solid {programaDia ? '#3182ce' : '#e2e8f0'}; border-radius: 8px; background: {programaDia ? '#f0f7ff' : '#ffffff'}; min-width: 90px; flex: 1;">
                 <label style="display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #4a5568;">
-                  <input type="checkbox" on:change={() => toggleDiaMinisterio(dia)} checked={!!programaDia} />
+                  <input type="checkbox" onchange={() => toggleDiaMinisterio(dia)} checked={!!programaDia} />
                   {dia.substring(0, 3)}. 
                 </label>
                 {#if programaDia}
@@ -1113,7 +1267,7 @@
             <button 
               type="button" 
               style="padding: 4px 10px; font-size: 0.75rem; background: #ebf8ff; border: 1px solid #90cdf4; color: #2b6cb0; border-radius: 4px; cursor: pointer; font-weight: bold;"
-              on:click={() => mostrarPreguntasTerritorio = !mostrarPreguntasTerritorio}
+              onclick={() => mostrarPreguntasTerritorio = !mostrarPreguntasTerritorio}
             >
               {mostrarPreguntasTerritorio ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
             </button>
@@ -1139,7 +1293,7 @@
             <button 
               type="button" 
               style="padding: 4px 10px; font-size: 0.75rem; background: #fffaf0; border: 1px solid #fbd38d; color: #9c4221; border-radius: 4px; cursor: pointer; font-weight: bold;"
-              on:click={() => mostrarPreguntasPrecursores = !mostrarPreguntasPrecursores}
+              onclick={() => mostrarPreguntasPrecursores = !mostrarPreguntasPrecursores}
             >
               {mostrarPreguntasPrecursores ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
             </button>
@@ -1167,28 +1321,28 @@
       Registro de Asistencia (S-88)
     </p>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-      <div class="campo-mini">
-        <label>Estudiantes:</label>
-        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.estudiantes} />
-      </div>
-      <div class="campo-mini">
-        <label>Sacados:</label>
-        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.sacados} />
-      </div>
-      <div class="campo-mini">
-        <label>Inactivos:</label>
-        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.inactivos} />
-      </div>
-      <div class="campo-mini">
-        <label>Hijos Testigos:</label>
-        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.hijosTestigos} />
-      </div>
-      <div class="campo-mini">
-        <label>No pueden asistir:</label>
-        <input type="number" bind:value={nuevaVisita.reuniones.asistencia.noAsisten} />
-      </div>
-    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; width: 100%;">
+  <div class="campo-mini">
+    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Estudiantes:</label>
+    <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.estudiantes} />
+  </div>
+  <div class="campo-mini">
+    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Sacados:</label>
+    <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.sacados} />
+  </div>
+  <div class="campo-mini">
+    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Inactivos:</label>
+    <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.inactivos} />
+  </div>
+  <div class="campo-mini">
+    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Hijos Testigos:</label>
+    <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.hijosTestigos} />
+  </div>
+  <div class="campo-mini">
+    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">No pueden asistir:</label>
+    <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.noAsisten} />
+  </div>
+</div>
 
     <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
       <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0;">
@@ -1199,13 +1353,28 @@
           <input type="text" placeholder="%" bind:value={nuevaVisita.reuniones.entreSemana.porcentaje} style="flex: 1;" />
         </div>
       </div>
-      <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0;">
-        <span style="font-weight: bold; font-size: 0.8rem; display: block; margin-bottom: 8px;">FIN DE SEMANA (Promedio)</span>
-        <div style="display: flex; gap: 10px;">
-          <input type="text" placeholder="Aum/Dism" bind:value={nuevaVisita.reuniones.finSemana.tendencia} style="flex: 2;" />
-          <input type="number" placeholder="Faltan" bind:value={nuevaVisita.reuniones.finSemana.faltan} style="flex: 1;" />
-          <input type="text" placeholder="%" bind:value={nuevaVisita.reuniones.finSemana.porcentaje} style="flex: 1;" />
-        </div>
+      <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0; flex: 1; min-width: 0;">
+  <span style="font-weight: bold; font-size: 0.8rem; display: block; margin-bottom: 8px;">FIN DE SEMANA (Promedio)</span>
+  <div style="display: flex; gap: 8px; width: 100%;">
+    <input 
+      type="text" 
+      placeholder="Aum/Dism" 
+      bind:value={nuevaVisita.reuniones.finSemana.tendencia} 
+      style="flex: 2; min-width: 0; width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px;" 
+    />
+    <input 
+      type="number" 
+      placeholder="0" 
+      bind:value={nuevaVisita.reuniones.finSemana.faltan} 
+      style="flex: 1; min-width: 0; width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px;" 
+    />
+    <input 
+      type="text" 
+      placeholder="%" 
+      bind:value={nuevaVisita.reuniones.finSemana.porcentaje} 
+      style="flex: 1; min-width: 0; width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px;" 
+    />
+  </div>
       </div>
     </div>
   </div>
@@ -1213,7 +1382,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2b6cb0;"
-    on:click={() => mostrarPreguntasReuniones = !mostrarPreguntasReuniones}
+    onclick={() => mostrarPreguntasReuniones = !mostrarPreguntasReuniones}
   >
     {mostrarPreguntasReuniones ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
   </button>
@@ -1274,7 +1443,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2f855a;"
-    on:click={() => mostrarPreguntasPastoreo = !mostrarPreguntasPastoreo}
+    onclick={() => mostrarPreguntasPastoreo = !mostrarPreguntasPastoreo}
   >
     {mostrarPreguntasPastoreo ? 'OCULTAR PREGUNTAS DE PASTOREO ▲' : 'VER PREGUNTAS DE PASTOREO ▼'}
   </button>
@@ -1326,7 +1495,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #fff5f7; border: 1px solid #fed7e2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #b83280;"
-    on:click={() => mostrarPreguntasCrecimiento = !mostrarPreguntasCrecimiento}
+    onclick={() => mostrarPreguntasCrecimiento = !mostrarPreguntasCrecimiento}
   >
     {mostrarPreguntasCrecimiento ? 'OCULTAR PREGUNTAS DE CRECIMIENTO ▲' : 'VER PREGUNTAS DE CRECIMIENTO ▼'}
   </button>
@@ -1370,7 +1539,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #fffaf0; border: 1px solid #fbd38d; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9c4221;"
-    on:click={() => mostrarPreguntasSuperServicio = !mostrarPreguntasSuperServicio}
+    onclick={() => mostrarPreguntasSuperServicio = !mostrarPreguntasSuperServicio}
   >
     {mostrarPreguntasSuperServicio ? 'OCULTAR PREGUNTAS ▲' : 'VER PREGUNTAS ▼'}
   </button>
@@ -1412,7 +1581,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
-    on:click={() => mostrarPreguntasPublicaciones = !mostrarPreguntasPublicaciones}
+    onclick={() => mostrarPreguntasPublicaciones = !mostrarPreguntasPublicaciones}
   >
     {mostrarPreguntasPublicaciones ? 'OCULTAR REQUISITOS ▲' : 'VER PREGUNTAS DE EXAMEN ▼'}
   </button>
@@ -1465,7 +1634,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #faf5ff; border: 1px solid #e9d8fd; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #6b46c1;"
-    on:click={() => mostrarPreguntasProgreso = !mostrarPreguntasProgreso}
+    onclick={() => mostrarPreguntasProgreso = !mostrarPreguntasProgreso}
   >
     {mostrarPreguntasProgreso ? 'OCULTAR GUÍA DE ANÁLISIS FAMILIAR ▲' : 'VER PREGUNTAS SOBRE PROGRESO ▼'}
   </button>
@@ -1524,7 +1693,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2b6cb0;"
-    on:click={() => mostrarPreguntasAncianos = !mostrarPreguntasAncianos}
+    onclick={() => mostrarPreguntasAncianos = !mostrarPreguntasAncianos}
   >
     {mostrarPreguntasAncianos ? 'OCULTAR GUÍA DE EVALUACIÓN ▲' : 'VER PREGUNTAS SOBRE LOS NOMBRADOS ▼'}
   </button>
@@ -1578,7 +1747,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2f855a;"
-    on:click={() => mostrarPreguntasLocal = !mostrarPreguntasLocal}
+    onclick={() => mostrarPreguntasLocal = !mostrarPreguntasLocal}
   >
     {mostrarPreguntasLocal ? 'OCULTAR PREGUNTAS SOBRE EL LOCAL ▲' : 'VER PREGUNTAS SOBRE EL LOCAL ▼'}
   </button>
@@ -1640,7 +1809,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
-    on:click={() => mostrarPreguntasInactivos = !mostrarPreguntasInactivos}
+    onclick={() => mostrarPreguntasInactivos = !mostrarPreguntasInactivos}
   >
     {mostrarPreguntasInactivos ? 'OCULTAR GUÍA DE ANÁLISIS ▲' : 'VER PREGUNTAS SOBRE INACTIVOS ▼'}
   </button>
@@ -1681,7 +1850,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #feebc8; border: 1px solid #fbd38d; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9c4221;"
-    on:click={() => mostrarPreguntasDetallePrecursores = !mostrarPreguntasDetallePrecursores}
+    onclick={() => mostrarPreguntasDetallePrecursores = !mostrarPreguntasDetallePrecursores}
   >
     {mostrarPreguntasDetallePrecursores ? 'OCULTAR GUÍA DE ANÁLISIS ▲' : 'VER PREGUNTAS SOBRE PRECURSORES ▼'}
   </button>
@@ -1740,7 +1909,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #e6fffa; border: 1px solid #b2f5ea; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #2c7a7b;"
-    on:click={() => mostrarPreguntasContabilidad = !mostrarPreguntasContabilidad}
+    onclick={() => mostrarPreguntasContabilidad = !mostrarPreguntasContabilidad}
   >
     {mostrarPreguntasContabilidad ? 'OCULTAR PUNTOS DE REVISIÓN ▲' : 'VER PREGUNTAS DE CONTABILIDAD ▼'}
   </button>
@@ -1791,7 +1960,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #fed7d7; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #9b2c2c;"
-    on:click={() => mostrarPreguntasProblemas = !mostrarPreguntasProblemas}
+    onclick={() => mostrarPreguntasProblemas = !mostrarPreguntasProblemas}
   >
     {mostrarPreguntasProblemas ? 'OCULTAR GUÍA DE PRIORIDAD ▲' : 'VER PUNTOS DE ATENCIÓN ▼'}
   </button>
@@ -1843,7 +2012,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #4a5568;"
-    on:click={() => mostrarPreguntasMiscelaneos = !mostrarPreguntasMiscelaneos}
+    onclick={() => mostrarPreguntasMiscelaneos = !mostrarPreguntasMiscelaneos}
   >
     {mostrarPreguntasMiscelaneos ? 'OCULTAR GUÍA ▲' : 'VER PUNTOS ADICIONALES ▼'}
   </button>
@@ -1885,7 +2054,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #475569;"
-    on:click={() => mostrarPreguntasDiscursos = !mostrarPreguntasDiscursos}
+    onclick={() => mostrarPreguntasDiscursos = !mostrarPreguntasDiscursos}
   >
     {mostrarPreguntasDiscursos ? 'OCULTAR SUGERENCIAS DE ENFOQUE ▲' : 'VER SUGERENCIAS DE ENFOQUE ▼'}
   </button>
@@ -1943,7 +2112,7 @@
   <button 
     type="button" 
     style="width: 100%; padding: 10px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: bold; color: #c53030;"
-    on:click={() => mostrarSugerenciasReuniones = !mostrarSugerenciasReuniones}
+    onclick={() => mostrarSugerenciasReuniones = !mostrarSugerenciasReuniones}
   >
     {mostrarSugerenciasReuniones ? 'OCULTAR GUÍA DE OBSERVACIÓN ▲' : 'VER PUNTOS A EVALUAR (S-38) ▼'}
   </button>
@@ -1988,12 +2157,12 @@
 
         <div class="campo" style="margin-top: 20px; display: flex; flex-direction: column;">
           <label for="v-obs" style="font-weight: bold; margin-bottom: 5px;">Observaciones Finales / Pendientes</label>
-          <textarea id="v-obs" bind:value={nuevaVisita.observaciones} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Temas adicionales o seguimiento..."></textarea>
+          <textarea id="v-obs" bind:value={nuevaVisita.observacionesFinales} rows="4" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Temas adicionales o seguimiento..."></textarea>
         </div>
 
         <div class="acciones-inferiores" style="margin-top: 20px; display: flex; gap: 10px;">
-          <button class="btn-secundario" on:click={() => creandoVisita = false}>Cancelar</button>
-          <button class="btn-primario" on:click={guardarVisita}>Guardar Registro Completo</button>
+          <button class="btn-secundario" onclick={() => creandoVisita = false}>Cancelar</button>
+          <button class="btn-primario" onclick={guardarVisita}>Guardar Registro Completo</button>
         </div>
       </div> 
     {/if}
@@ -2023,10 +2192,10 @@
         <p class="texto-vacio">No hay visitas registradas este mes aún.</p>
       {:else}
         <ul class="lista-informe">
-          {#each $visitasStore.filter(v => new Date(v.fecha).getMonth() === new Date().getMonth()) as visita}
+          {#each visitasMesActual as visita}
             <li>
-              <strong>{new Date(visita.fecha).toLocaleDateString()}</strong>: 
-              {visita.congregacionNombre}
+              <strong>{new Date(visita.fecha + 'T00:00:00').toLocaleDateString()}</strong>: 
+              {visita.congregacionId} 
             </li>
           {/each}
         </ul>
@@ -2047,13 +2216,13 @@
         <h3>📦 Gestión de Datos</h3>
         <p>Copia de seguridad y restauración (útil para mover datos entre PCs)</p>
         <div class="acciones-datos">
-          <button class="btn-config" on:click={exportarBackup}>
+          <button class="btn-config" onclick={exportarBackup}>
             📥 Exportar Backup (JSON)
           </button>
-          <button class="btn-config btn-secundario" on:click={() => document.getElementById('importar').click()}>
-            📤 Importar Backup
+          <button class="btn-config btn-secundario" onclick={() => document.getElementById('importar')?.click()}>
+            📤 Importar Datos
           </button>
-          <input type="file" id="importar" style="display: none;" on:change={importarBackup} />
+          <input type="file" id="importar" style="display: none;" onchange={importarBackup} />
         </div>
       </section>
 
@@ -2087,17 +2256,17 @@
       <button 
         class="color-dot" 
         style="background: #b63a3a;" 
-        on:click={() => $colorAcento = '#b63a3a'}
+        onclick={() => $colorAcento = '#b63a3a'}
         class:activo={$colorAcento === '#b63a3a'}></button>
       <button 
         class="color-dot" 
         style="background: #2b6cb0;" 
-        on:click={() => $colorAcento = '#2b6cb0'}
+        onclick={() => $colorAcento = '#2b6cb0'}
         class:activo={$colorAcento === '#2b6cb0'}></button>
       <button 
         class="color-dot" 
         style="background: #2d3748;" 
-        on:click={() => $colorAcento = '#2d3748'}
+        onclick={() => $colorAcento = '#2d3748'}
         class:activo={$colorAcento === '#2d3748'}></button>
     </div>
   </div>
@@ -2106,7 +2275,7 @@
       <section class="config-card">
         <h3 style="color: #dc2626;">⚠️ Zona Peligrosa</h3>
         <p>Esto borrará todas las congregaciones y visitas guardadas.</p>
-        <button class="btn-eliminar" on:click={limpiarTodo}>
+        <button class="btn-eliminar" onclick={limpiarTodo}>
           Borrrar todos los datos
         </button>
       </section>
@@ -2397,15 +2566,32 @@
   }
 
   /* Botón Eliminar - Estilo de advertencia */
-  .btn-borrar {
-    background-color: #fff1f2;
-    color: #e11d48;
-    border-color: #ffe4e6;
+   .btn-borrar {
+    background: #fff1f2; /* Fondo rojo muy suave */
+    border: 1px solid #ffe4e6;
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+  /* Estilo del icono SVG */
+  .icono-borrar {
+    width: 18px;  /* Ajusta el tamaño aquí */
+    height: 18px;
+    /* Si tu SVG es negro y lo quieres rojo, puedes usar este filtro: */
+    filter: invert(24%) sepia(87%) saturate(2333%) hue-rotate(337deg) brightness(88%) contrast(93%);
   }
 
+  /* Efecto al pasar el ratón */
   .btn-borrar:hover {
     background-color: #ffe4e6;
-    color: #be123c;
+    transform: scale(1.1);
+    border-color: #fca5a5;
   }
 
   /* Ajuste para que la tabla ocupe todo el ancho */
@@ -2519,5 +2705,257 @@
   
   :global(body.dark-mode) .stat-label {
     color: #94a3b8;
+  }
+
+  /* --- SECCIÓN AGENDA REFECCIONADA --- */
+  /* Contenedor principal */
+  /* 1. EL CONTENEDOR: Forzamos que sea una sola fila pase lo que pase */
+  .input-container {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-bottom: 25px;
+  }
+
+  /* 2. EL CUADRO DE TEXTO: Le damos permiso para crecer y ocupar todo */
+  .input-texto {
+    flex: 1 1 auto !important; /* Crece para llenar el hueco */
+    height: 45px !important;
+    padding: 0 15px !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 12px !important;
+    background-color: #ffffff !important;
+    font-size: 15px !important;
+    min-width: 100px !important; /* Para que no desaparezca */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    outline: none !important;
+  }
+
+  /* 3. EL SELECTOR DE FECHA: Lo "congelamos" para que no se estire */
+  .input-fecha-hora {
+    flex: 0 0 210px !important; /* No crece, no se encoge, mide exactamente 210px */
+    height: 45px !important;
+    padding: 0 10px !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 12px !important;
+    background-color: #ffffff !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+  }
+
+  /* 4. EL BOTÓN: También lo dejamos fijo y bonito */
+  .btn-add {
+    flex: 0 0 100px !important; /* Ancho fijo de 100px */
+    height: 45px !important;
+    background: linear-gradient(135deg, #b63a3a, #962f2f) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 6px rgba(182, 58, 58, 0.2) !important;
+  }
+
+  /* Efecto al pasar el ratón */
+  .btn-add:hover {
+    transform: translateY(-1px) !important;
+    filter: brightness(1.1) !important;
+  }
+
+  .btn-add:active {
+    transform: translateY(0);
+  }
+
+  .tarea-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 4px solid #b63a3a;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: entradaSuave 0.3s ease-out;
+    
+  }
+
+  .tarea-card.completada {
+    border-left-color: #4caf50;
+    opacity: 0.7;
+  }
+
+  .tarea-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .tarea-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .badge-vencimiento {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fff0f0; /* Fondo rojizo suave */
+  color: #b63a3a;            /* Texto rojo oscuro */
+  padding: 4px 12px;         /* Espacio interno para que no esté apretado */
+  border-radius: 50px;       /* Forma de píldora redondeada */
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid #ffdbdb; /* Un borde sutil para definir la etiqueta */
+  margin-top: 8px;           /* Separación del texto de la tarea */
+  width: fit-content;
+}
+
+  .tachado {
+    text-decoration: line-through;
+    color: #888;
+  }
+
+  .vacio {
+    color: #999;
+    text-align: center;
+    padding: 20px;
+    list-style: none;
+  }
+
+  /* FUERZA BRUTA PARA EL DISEÑO DE LA AGENDA */
+  .agenda-layout-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto auto !important; /* El 1fr hace que el primero sea largo */
+    gap: 12px !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 25px !important;
+  }
+
+  .agenda-input-texto {
+    width: 100% !important; /* Ahora sí usará todo el espacio del 1fr */
+    height: 46px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 10px !important;
+    padding: 0 15px !important;
+    font-size: 15px !important;
+    box-sizing: border-box !important;
+  }
+
+  .agenda-input-fecha {
+    width: 220px !important; /* Tamaño fijo para que no se desproporcione */
+    height: 46px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 10px !important;
+    padding: 0 10px !important;
+    background: white !important;
+  }
+
+  .agenda-btn-add {
+    height: 46px !important;
+    padding: 0 25px !important;
+    background-color: #b63a3a !important; /* El rojo de tu logo */
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+  }
+
+  .agenda-btn-add:hover {
+    background-color: #962f2f !important;
+  }
+
+  .badge-alerta {
+    background-color: #b63a3a; /* El rojo de tu marca */
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    
+    /* Estos son los detalles de pulido que añadimos: */
+    border: 1.5px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    
+    /* Animación para que aparezca suavemente */
+    animation: aparecer 0.3s ease-out;
+  }
+
+  @keyframes aparecer {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes entradaSuave {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Contenedor para alinear los botones en la misma fila */
+  .grupo-botones {
+    display: flex;
+    gap: 8px;
+    justify-content: center; 
+    align-items: center; /* Esto nivela las alturas perfectamente */
+    height: 100%;        /* Asegura que use todo el alto de la celda */
+    vertical-align: middle;
+  }
+
+  /* Estilo base para los botones de la tabla */
+  .btn-tabla {
+    height: 32px; /* Altura fija para ambos */
+    padding: 0 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    line-height: 1;
+  }
+
+  /* Estilo Editar (Azul grisáceo) */
+  .btn-editar {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+  }
+
+  .btn-editar:hover {
+    background-color: #e2e8f0;
+  }
+
+  /* Estilo Eliminar (Rojo suave) */
+  .btn-eliminar {
+    background-color: #fff1f2;
+    color: #e11d48;
+    border-color: #fecdd3;
+  }
+
+  .btn-eliminar:hover {
+    background-color: #ffe4e6;
+  }
+
+  /* Alineación de la columna de acciones */
+  .col-acciones {
+    text-align: right;
+    padding-right: 20px;
   }
 </style>
