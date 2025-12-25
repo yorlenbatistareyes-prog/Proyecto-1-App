@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { jsPDF } from 'jspdf';
-  import autoTable from 'jspdf-autotable';
-  
+  import { generarPDFIndividual, generarPDFListado } from '$lib/utils/pdfGenerator';
+  import { moldeCongregacion, eliminarCongregacion, procesarGuardadoCongregacion } from '$lib/congregaciones';
   import Panel from '$lib/components/Panel.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
   import Toast from '$lib/components/Toast.svelte';
   import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento, mostrarToast } from '$lib/stores';
-  import type { Circuito, Congregacion, Vista } from '$lib/types';
+  import type { Circuito, Congregacion, Visita, Vista } from '$lib/types'; 
+  import { moldeVisita, eliminarVisita, procesarGuardadoVisita } from '$lib/visitas';
 
   import { Settings, Menu, User, Trash2, Pencil, Plus, Save, X, Calendar, Search, CircleCheckBig 
 } from 'lucide-svelte';
@@ -180,16 +180,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   let mostrarFormularioCongregacion = $state(false);
   let indiceCongregacionEditando: number | null = null;
   
-  const moldeCongregacion: Congregacion = {
-    circuito: '', seccion: '', sucursal: '',
-    nombre: '', numero: '', ciudad: '', provincia: '',
-    pais: 'Cuba', idioma: 'S', esLenguaSeñas: false,
-    reunionEntreSemana: '', horaEntreSemana: '',
-    reunionFinSemana: '', horaFinSemana: '',
-    telefono: ''
-    // Eliminados: idiomaFormulario y enlaceJw
-  };
-  
   // 1. Nueva forma de declarar la congregación y la búsqueda
   let nuevaCongregacion = $state({ ...moldeCongregacion });
   let textoBusqueda = $state('');
@@ -220,24 +210,12 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       alert('Complete los campos obligatorios (*)');
       return;
     }
-    if (indiceCongregacionEditando === null) {
-      $congregaciones = [...$congregaciones, { ...nuevaCongregacion }];
-    } else {
-      $congregaciones[indiceCongregacionEditando] = { ...nuevaCongregacion };
-      $congregaciones = [...$congregaciones];
-    }
+    // LLAMAMOS A LA LÓGICA EXTERNA
+    procesarGuardadoCongregacion(nuevaCongregacion);
+    
    // Cerramos el formulario y mostramos el aviso
     mostrarFormularioCongregacion = false; 
     mostrarToast("✅ Congregación guardada con éxito"); //
-  }
- 
-  function eliminarCongregacion(index: number) {
-    if (confirm('¿Eliminar esta congregación?')) {
-      $congregaciones = $congregaciones.filter((_, i) => i !== index);
-      
-      // Mostramos el aviso en rojo (tipo error)
-      mostrarToast("🗑️ Congregación eliminada", "error"); //
-    }
   }
 
   /* LÓGICA: CONFIGURACIÓN Y BACKUP */
@@ -324,298 +302,35 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   let mostrarPreguntasDiscursos = $state(false);
   let mostrarSugerenciasReuniones = $state(false);
   
-
-  let nuevaVisita = $state({
-    fecha: '',
-    congregacionId: '',
-    tipo: 'Ordinaria',
-    ministerio: {
-      observaciones: '',
-      territorioObs: '',
-      precursoresObs: '',
-      programa: [] as Array<{ dia: string; hora: string }>
-    },
-    reuniones: {
-      asistencia: {
-        estudiantes: 0,
-        sacados: 0,
-        inactivos: 0,
-        hijosTestigos: 0,
-        noAsisten: 0
-      },
-      entreSemana: { tendencia: '', faltan: 0, porcentaje: '' },
-      finSemana: { tendencia: '', faltan: 0, porcentaje: '' },
-      observaciones: ''
-    },
-    pastoreo: {
-      observaciones: '',
-      inactivos: 0,
-      sacados: 0
-    },
-    crecimiento: {
-      observaciones: '',
-      cursosRegulares: false // Añadimos un selector para esta pregunta específica
-    },
-    superintendenteServicio: {
-      observaciones: '',
-      visitaPeriodica: 'si'
-    },
-    publicaciones: {
-      observaciones: '',
-      inventarioMensual: false,
-      excedente: 'no'
-    },
-    progresoEspiritual: {
-      observaciones: '',
-      habitosEstudio: 'buenos'
-    },
-    cuerpoNombrados: {
-      observaciones: '',
-      unidadCuerpo: 'buena',
-      programaCapacitacion: false
-    },
-    localReunion: {
-      observaciones: '',
-      programaLimpieza: 'si',
-      planSeguridad: false
-    },
-    analisisInactivos: {
-      observaciones: '',
-      planAccion: false
-    },
-    precursoresAnalisis: {
-      observaciones: '',
-      apoyoAncianos: 'si',
-      horarioPractico: true
-    },
-    contabilidad: {
-      observaciones: '',
-      contabilidadEnLinea: 'no',
-      archivosRevisados: false
-    },
-    problemasGraves: {
-      observaciones: '',
-      nivelUrgencia: 'bajo',
-      requiereIntervencionSucursal: false
-    },
-    miscelaneos: {
-      observaciones: '',
-      temasPendientes: false
-    },
-    ideasDiscursos: {
-      puntosClave: '',
-      textosBiblicos: '',
-      sugerenciasAncianos: ''
-    },
-    observacionesReuniones: {
-      vidaMinisterio: {
-        asignacionesS89: '',
-        consejeroAuxiliar: ''
-      },
-      finDeSemana: {
-        estudioAtalaya: ''
-      }
-    },
-    observacionesFinales: ''
-  });
+  let nuevaVisita = $state({ ...moldeVisita });
 
   function guardarVisita() {
-    // 1. Validación de seguridad
     if (!nuevaVisita.congregacionId || !nuevaVisita.fecha) {
       alert("Por favor, seleccione la congregación y la fecha.");
       return;
     }
-// 2. Guardado en el Store
-    const visitaGuardada = { ...nuevaVisita, id: Date.now() };
-    $visitasStore = [...$visitasStore, visitaGuardada];
 
-    // 3. Lógica de Asuntos Pendientes (Integración con la Agenda)
-if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
-    const nuevoPendiente = {
-        id: Date.now() + 1,
-        texto: `De ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`,
-        completada: false,
-        fechaVencimiento: null // Añadimos esto para que coincida con tu interfaz de tareas
-    };
-    tareas = [...tareas, nuevoPendiente];
-}
-// 4. Generación automática de PDF
-    generarPDFIndividual(nuevaVisita);
+    // 1. Procesamos el guardado
+    const esNueva = procesarGuardadoVisita(nuevaVisita);
 
-   // 5. CIERRE Y NOTIFICACIÓN (Sustituye al alert antiguo)
-    creandoVisita = false; // Mantenemos tu variable 'creandoVisita' si así se llama en tu código
-    resetearFormulario();
-    mostrarToast("✅ Visita guardada y PDF generado con éxito");
+    // 2. Lógica de Tareas (CORREGIDA: observacionesFinales en español)
+    if (esNueva && nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
+        const nuevoPendiente = {
+            id: Date.now() + 1,
+            texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`,
+            completada: false,
+            fechaVencimiento: null 
+        };
+        
+        // Actualizamos la variable local de tareas
+        tareas = [...tareas, nuevoPendiente];
+        console.log("✅ Tarea creada con éxito");
+    }
+
+    // 3. Limpieza y Cierre
+    creandoVisita = false; 
+    nuevaVisita = { ...moldeVisita }; 
   }
-
-  function resetearFormulario() {
-    nuevaVisita = {
-      fecha: '',
-      congregacionId: '',
-      tipo: 'Ordinaria',
-      ministerio: { observaciones: '', territorioObs: '', precursoresObs: '', programa: [] },
-      reuniones: { 
-        asistencia: { estudiantes: 0, sacados: 0, inactivos: 0, hijosTestigos: 0, noAsisten: 0 },
-        entreSemana: { tendencia: '', faltan: 0, porcentaje: '' },
-        finSemana: { tendencia: '', faltan: 0, porcentaje: '' },
-        observaciones: ''
-      },
-      pastoreo: { observaciones: '', inactivos: 0, sacados: 0 },
-      crecimiento: { observaciones: '', cursosRegulares: false },
-      superintendenteServicio: { observaciones: '', visitaPeriodica: 'si' },
-      publicaciones: { observaciones: '', inventarioMensual: false, excedente: 'no' },
-      progresoEspiritual: { observaciones: '', habitosEstudio: 'buenos' },
-      cuerpoNombrados: { observaciones: '', unidadCuerpo: 'buena', programaCapacitacion: false },
-      localReunion: { observaciones: '', programaLimpieza: 'si', planSeguridad: false },
-      analisisInactivos: { observaciones: '', planAccion: false },
-      precursoresAnalisis: { observaciones: '', apoyoAncianos: 'si', horarioPractico: true },
-      contabilidad: { observaciones: '', contabilidadEnLinea: 'no', archivosRevisados: false },
-      problemasGraves: { observaciones: '', nivelUrgencia: 'bajo', requiereIntervencionSucursal: false },
-      miscelaneos: { observaciones: '', temasPendientes: false },
-      ideasDiscursos: { puntosClave: '', textosBiblicos: '', sugerenciasAncianos: '' },
-      observacionesReuniones: {
-        vidaMinisterio: { asignacionesS89: '', consejeroAuxiliar: '' },
-        finDeSemana: { estudioAtalaya: '' }
-      },
-      observacionesFinales: ''
-    };
-  }
-
-  function generarPDFIndividual(visita: any) {
-    const doc = new jsPDF();
-    let y = 20;
-
-    // --- ENCABEZADO ESTILO FORMULARIO ---
-    doc.setFillColor(63, 81, 181);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("INFORME DE VISITA DEL SUPERINTENDENTE", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`CONGREGACIÓN: ${visita.congregacionId} | FECHA: ${visita.fecha} | TIPO: ${visita.tipo}`, 14, 22);
-    doc.setTextColor(0, 0, 0);
-    y = 40;
-
-    const crearTablaModulo = (titulo: string, filas: any[][]) => {
-        autoTable(doc, {
-            startY: y,
-            head: [[titulo.toUpperCase(), "RESPUESTA / OBSERVACIONES"]],
-            body: filas,
-            theme: 'striped',
-            headStyles: { fillColor: [63, 81, 181], fontSize: 9 },
-            styles: { fontSize: 8, cellPadding: 2 },
-            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 } },
-            margin: { left: 14, right: 14 }
-        });
-        y = (doc as any).lastAutoTable.finalY + 8;
-        if (y > 260) { doc.addPage(); y = 20; }
-    };
-
-    // 1. MINISTERIO
-    crearTablaModulo("1. Ministerio del Campo", [
-        ["Observaciones Territorio", visita.ministerio.territorioObs],
-        ["Observaciones Precursores", visita.ministerio.precursoresObs],
-        ["Observaciones Generales", visita.ministerio.observaciones]
-    ]);
-
-    // 2. REUNIONES (Asistencia completa)
-    crearTablaModulo("2. Reuniones y Asistencia", [
-        ["Estudiantes / Inactivos", `Est: ${visita.reuniones.asistencia.estudiantes} / Inac: ${visita.reuniones.asistencia.inactivos}`],
-        ["Sacados / Hijos de Testigos", `Sac: ${visita.reuniones.asistencia.sacados} / Hijos: ${visita.reuniones.asistencia.hijosTestigos}`],
-        ["Tendencia Entre Semana", `${visita.reuniones.entreSemana.tendencia} (Faltan: ${visita.reuniones.entreSemana.faltan})`],
-        ["Tendencia Fin de Semana", `${visita.reuniones.finSemana.tendencia} (Faltan: ${visita.reuniones.finSemana.faltan})`],
-        ["Observaciones de Reuniones", visita.reuniones.observaciones]
-    ]);
-
-    // 3. PASTOREO
-    crearTablaModulo("3. Pastoreo", [
-        ["Inactivos visitados", visita.pastoreo.inactivos],
-        ["Sacados visitados", visita.pastoreo.sacados],
-        ["Observaciones", visita.pastoreo.observaciones]
-    ]);
-
-    // 4. CRECIMIENTO
-    crearTablaModulo("4. Crecimiento", [
-        ["Cursos Regulares", visita.crecimiento.cursosRegulares ? "Sí" : "No"],
-        ["Observaciones", visita.crecimiento.observaciones]
-    ]);
-
-    // 5. SUPERINTENDENTE DE SERVICIO
-    crearTablaModulo("5. Superintendente de Servicio", [
-        ["Visita Periódica", visita.superintendenteServicio.visitaPeriodica === 'si' ? 'Sí' : 'No'],
-        ["Observaciones", visita.superintendenteServicio.observaciones]
-    ]);
-
-    // 6. PUBLICACIONES
-    crearTablaModulo("6. Publicaciones", [
-        ["Inventario Mensual", visita.publicaciones.inventarioMensual ? "Sí" : "No"],
-        ["Excedente", visita.publicaciones.excedente],
-        ["Observaciones", visita.publicaciones.observaciones]
-    ]);
-
-    // 7. PROGRESO ESPIRITUAL
-    crearTablaModulo("7. Progreso Espiritual", [
-        ["Hábitos de Estudio", visita.progresoEspiritual.habitosEstudio],
-        ["Observaciones", visita.progresoEspiritual.observaciones]
-    ]);
-
-    // 8. CUERPO DE NOMBRADOS
-    crearTablaModulo("8. Cuerpo de Nombrados", [
-        ["Unidad del Cuerpo", visita.cuerpoNombrados.unidadCuerpo],
-        ["Programa de Capacitación", visita.cuerpoNombrados.programaCapacitacion ? "Activo" : "No"],
-        ["Observaciones", visita.cuerpoNombrados.observaciones]
-    ]);
-
-    // 9. LOCAL DE REUNIÓN
-    crearTablaModulo("9. Local de Reunión", [
-        ["Programa de Limpieza", visita.localReunion.programaLimpieza === 'si' ? 'Al día' : 'Revisar'],
-        ["Plan de Seguridad", visita.localReunion.planSeguridad ? "Establecido" : "No"],
-        ["Observaciones", visita.localReunion.observaciones]
-    ]);
-
-    // 10. ANÁLISIS DE INACTIVOS
-    crearTablaModulo("10. Análisis de Inactivos", [
-        ["Plan de Acción", visita.analisisInactivos.planAccion ? "Sí" : "No"],
-        ["Observaciones", visita.analisisInactivos.observaciones]
-    ]);
-
-    // 11. PRECURSORES
-    crearTablaModulo("11. Análisis de Precursores", [
-        ["Apoyo de los Ancianos", visita.precursoresAnalisis.apoyoAncianos === 'si' ? 'Sí' : 'No'],
-        ["Horario Práctico", visita.precursoresAnalisis.horarioPractico ? "Sí" : "No"],
-        ["Observaciones", visita.precursoresAnalisis.observaciones]
-    ]);
-
-    // 12. CONTABILIDAD
-    crearTablaModulo("12. Contabilidad", [
-        ["Contabilidad en Línea", visita.contabilidad.contabilidadEnLinea === 'si' ? 'Sí' : 'No'],
-        ["Archivos Revisados", visita.contabilidad.archivosRevisados ? "Sí" : "No"],
-        ["Observaciones", visita.contabilidad.observaciones]
-    ]);
-
-    // 13. PROBLEMAS GRAVES
-    crearTablaModulo("13. Problemas Graves", [
-        ["Nivel de Urgencia", visita.problemasGraves.nivelUrgencia.toUpperCase()],
-        ["Intervención Sucursal", visita.problemasGraves.requiereIntervencionSucursal ? "REQUERIDA" : "No"],
-        ["Observaciones", visita.problemasGraves.observaciones]
-    ]);
-
-    // 14. INSTRUCCIÓN Y REUNIONES (Vida y Ministerio / Atalaya)
-    crearTablaModulo("14. Instrucción y Reuniones", [
-        ["Puntos Clave Discursos", visita.ideasDiscursos.puntosClave],
-        ["Sugerencias Ancianos", visita.ideasDiscursos.sugerenciasAncianos],
-        ["Vida y Min. (S-89)", visita.observacionesReuniones.vidaMinisterio.asignacionesS89],
-        ["Estudio Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
-    ]);
-
-    // 15. CONCLUSIONES
-    crearTablaModulo("15. Observaciones Finales", [
-        ["Comentarios Finales", visita.observacionesFinales]
-    ]);
-
-    doc.save(`Informe_Visita_${visita.congregacionId}.pdf`);
-}
 
   function toggleDiaMinisterio(dia: string) {
     const programa = nuevaVisita.ministerio.programa;
@@ -661,40 +376,24 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
 
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
-  function exportarDatos(formato: 'csv' | 'pdf') {
-    if ($visitasStore.length === 0) {
+ function exportarDatos(formato: 'csv' | 'pdf') {
+    // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
+    if (visitasFiltradas.length === 0) {
       return alert('No hay datos registrados para exportar.');
     }
-    
-
-    const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
-    
-    const filas = $visitasStore.map(v => [
-      v.fecha || 'N/A', 
-      v.congregacionId || 'N/A', 
-      v.tipo || 'N/A', 
-      v.observacionesFinales || ''
-    ]);
 
     if (formato === 'pdf') {
-      const doc = new jsPDF();
-      doc.setFontSize(18);
-      doc.text('Informe Mensual de Visitas', 14, 15);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 22);
-
-      autoTable(doc, {
-        head: [encabezados],
-        body: filas,
-        startY: 25,
-        theme: 'striped',
-        headStyles: { fillColor: [91, 76, 196], textColor: [255, 255, 255] },
-        alternateRowStyles: { fillColor: [245, 245, 255] }
-      });
-
-      doc.save(`Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`);
+      // Llamamos a la lógica externa
+      generarPDFListado(visitasFiltradas);
     } else {
+      // El CSV es solo texto, puede quedarse aquí
+      const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
+      const filas = visitasFiltradas.map(v => [
+        v.fecha || 'N/A', 
+        v.congregacionId || 'N/A', 
+        v.tipo || 'N/A', 
+        v.observacionesFinales || ''
+      ]);
       let contenido = encabezados.join(';') + '\n';
       filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
       const BOM = '\uFEFF';
@@ -709,7 +408,6 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
   }
 
   // --- FUNCIONES DE GESTIÓN DE VISITAS ---
-  
   function cargarVisitaParaVer(visita: any) {
     // Rellenamos el formulario con los datos guardados
     nuevaVisita = JSON.parse(JSON.stringify(visita)); 
@@ -717,16 +415,6 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     creandoVisita = true;
     // Subimos al inicio para ver el reporte
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function eliminarVisita(id: number | undefined) {
-    if (!id) {
-      alert("Error: Este registro no posee un identificador válido.");
-      return;
-    }
-    if (confirm("¿Seguro que desea eliminar permanentemente este registro de visita?")) {
-      $visitasStore = $visitasStore.filter(v => v.id !== id);
-    }
   }
 
   // Variables para el Perfil
@@ -3046,7 +2734,6 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     gap: 8px !important;
     width: 100% !important;
   }
-
   /* 3. PROTECCIÓN: Evitamos que los módulos se pongan uno al lado del otro */
   /* Forzamos a que cada tarjeta ocupe su propia línea siempre */
   .config-card, section, .form-grande {
@@ -3064,7 +2751,6 @@ if (nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() 
     flex-shrink: 0 !important;
     margin-right: 8px !important;
   }
-
   /* 5. CAMPOS DE TEXTO: Que se ajusten al ancho de su tarjeta */
   input:not([type="radio"]):not([type="checkbox"]), select, textarea {
     width: 100% !important;
