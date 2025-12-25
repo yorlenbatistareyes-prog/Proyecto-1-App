@@ -8,10 +8,11 @@
   import Header from '$lib/components/Header.svelte';
   import BottomNav from '$lib/components/BottomNav.svelte';
   import Toast from '$lib/components/Toast.svelte';
+  
   import { vistaActual, circuitos, congregaciones, visitasStore, temaOscuro, colorAcento, mostrarToast } from '$lib/stores';
   import type { Circuito, Congregacion, Visita, Vista } from '$lib/types'; 
   import { moldeVisita, eliminarVisita, procesarGuardadoVisita } from '$lib/visitas';
-
+  
   import { Settings, Menu, User, Trash2, Pencil, Plus, Save, X, Calendar, Search, CircleCheckBig 
 } from 'lucide-svelte';
 
@@ -23,40 +24,33 @@
   });
 
   // --- LÓGICA DE INFORMES (Ajuste 2) ---
-  let visitasMesActual: any[] = [];
-  let statsMes = { total: 0, congreDistintas: 0, promedioPorSemana: "0" };
-
-  function calcularEstadisticas(todasLasVisitas: any[]) {
+  let visitasMesActual = $derived.by(() => {
     const ahora = new Date();
     const mes = ahora.getMonth();
     const anio = ahora.getFullYear();
 
-    visitasMesActual = todasLasVisitas.filter(v => {
+    return $visitasStore.filter(v => {
       if (!v || !v.fecha) return false;
       const f = new Date(v.fecha + 'T00:00:00');
       return f.getMonth() === mes && f.getFullYear() === anio;
     });
-
-    statsMes = {
-      total: visitasMesActual.length,
-      congreDistintas: new Set(visitasMesActual.map(v => v.congregacionId)).size,
-      promedioPorSemana: (visitasMesActual.length / 4).toFixed(1)
-    };
-  }
-
-  $effect(() => {
-    calcularEstadisticas($visitasStore);
   });
 
-  let menuAbiertoId = $state(null);
- 
-  function toggleMenu(index: number) {
-    menuAbiertoId = menuAbiertoId === index ? null : index;
-  }
- 
-  function cerrarMenu() {
-    menuAbiertoId = null;
-  }
+  let statsMes = $derived({
+    total: visitasMesActual.length,
+    congreDistintas: new Set(visitasMesActual.map(v => v.congregacionId)).size,
+    promedioPorSemana: (visitasMesActual.length / 4).toFixed(1)
+  });
+
+  let menuAbiertoId = $state<number | null>(null);
+
+function toggleMenu(index: number) {
+  menuAbiertoId = menuAbiertoId === index ? null : index;
+}
+
+function cerrarMenu() {
+  menuAbiertoId = null;
+}
  
   /* LÓGICA: INICIO / AGENDA */
   let seccionInicio = $state<'registros' | 'pendientes'>('registros'); 
@@ -143,7 +137,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   /* LÓGICA: CIRCUITOS */
   let creandoCircuito = $state(false);
   let indiceCircuitoEditando: number | null = null;
-  let nuevoCircuito: Circuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
+  let nuevoCircuito = $state<Circuito>({ nombre: '', idioma: 'S', pais: 'Cuba' });
  
   function prepararNuevoCircuito() {
     nuevoCircuito = { nombre: '', idioma: 'S', pais: 'Cuba' };
@@ -178,7 +172,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
  
   /* LÓGICA: CONGREGACIONES */
   let mostrarFormularioCongregacion = $state(false);
-  let indiceCongregacionEditando: number | null = null;
+  let indiceCongregacionEditando = $state<number | null>(null);
   
   // 1. Nueva forma de declarar la congregación y la búsqueda
   let nuevaCongregacion = $state({ ...moldeCongregacion });
@@ -343,7 +337,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   }
 }
 
-  let textoBusquedaVisitas = '';
+  let textoBusquedaVisitas = $state('');
 
 /* --- COPIAR DESDE AQUÍ --- */
   let filtroMes = $state("Todos");
@@ -568,9 +562,18 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       </table>
     {:else}
       <div class="form-grande">
-        <div class="campo"><label>Nombre del Circuito</label><input bind:value={nuevoCircuito.nombre} /></div>
-        <div class="campo"><label>Idioma</label><input bind:value={nuevoCircuito.idioma} /></div>
-        <div class="campo"><label>País</label><input bind:value={nuevoCircuito.pais} /></div>
+        <div class="campo">
+            <label for="nombre-circuito">Nombre del Circuito</label>
+            <input id="nombre-circuito" bind:value={nuevoCircuito.nombre} />
+        </div>
+        <div class="campo">
+            <label for="idioma-circuito">Idioma</label>
+            <input id="idioma-circuito" bind:value={nuevoCircuito.idioma} />
+        </div>
+        <div class="campo">
+            <label for="pais-circuito">País</label>
+            <input id="pais-circuito" bind:value={nuevoCircuito.pais} />
+        </div>
         <div class="acciones-inferiores">
           <button class="btn-secundario" onclick={() => creandoCircuito = false}>Cancelar</button>
           <button class="btn-primario" onclick={guardarCircuito}>Guardar</button>
@@ -640,11 +643,11 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </button>
   
   <button 
-    style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
-    onclick={() => { eliminarCongregacion(i); cerrarMenu(); }}
-  >
-    <Trash2 size={14} /> Eliminar
-  </button>
+  style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 15px; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.85rem; color: #dc2626;"
+  onclick={() => { eliminarCongregacion(c.nombre); cerrarMenu(); }}
+>
+  <Trash2 size={14} /> Eliminar
+</button>
 </div>
 {/if}
     </td>
@@ -722,14 +725,14 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
         <div class="fila-reunion">
           <div class="campo-reunion">
-            <label>Reunión de entre semana</label>
+            <label for="reunion-semana">Reunión de entre semana</label>
             <div class="time-wrapper">
               <input type="text" bind:value={nuevaCongregacion.reunionEntreSemana} placeholder="Día" />
               <input type="time" bind:value={nuevaCongregacion.horaEntreSemana} />
             </div>
           </div>
           <div class="campo-reunion">
-            <label>Reunión de fin de semana</label>
+            <label for="reunion-fin-semana">Reunión de fin de semana</label>
             <div class="time-wrapper">
               <input type="text" bind:value={nuevaCongregacion.reunionFinSemana} placeholder="Día" />
               <input type="time" bind:value={nuevaCongregacion.horaFinSemana} />
@@ -929,7 +932,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
           {/if}
 
           <div style="margin-bottom: 20px;">
-            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Análisis de Actividad:</label>
+            <label for="analisis-actividad" style="display: block; font-weight: bold; margin-bottom: 5px;">
+                Análisis de Actividad:
+            </label>
             <textarea 
               style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
               bind:value={nuevaVisita.ministerio.observaciones}
@@ -939,7 +944,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
 
-          <label style="font-weight: bold; display: block; margin-bottom: 10px;">Programa de Predicación:</label>
+          <label for="programa-predicacion" style="font-weight: bold; display: block; margin-bottom: 10px;">
+              Programa de Predicación:
+          </label>
           <div style="display: flex; flex-wrap: wrap; gap: 10px;">
             {#each diasSemana as dia}
               {@const programaDia = nuevaVisita.ministerio.programa.find(p => p.dia === dia)}
@@ -1022,23 +1029,23 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; width: 100%;">
   <div class="campo-mini">
-    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Estudiantes:</label>
+    <label for="estudiantes"style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Estudiantes:</label>
     <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.estudiantes} />
   </div>
   <div class="campo-mini">
-    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Sacados:</label>
+    <label for="Sacados" style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Sacados:</label>
     <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.sacados} />
   </div>
   <div class="campo-mini">
-    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Inactivos:</label>
+    <label for="Inactivos" style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Inactivos:</label>
     <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.inactivos} />
   </div>
   <div class="campo-mini">
-    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Hijos Testigos:</label>
+    <label for="Hijos Testigos" style="display: block; font-size: 0.8rem; margin-bottom: 4px;">Hijos Testigos:</label>
     <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.hijosTestigos} />
   </div>
   <div class="campo-mini">
-    <label style="display: block; font-size: 0.8rem; margin-bottom: 4px;">No pueden asistir:</label>
+    <label for="No pueden asistir" style="display: block; font-size: 0.8rem; margin-bottom: 4px;">No pueden asistir:</label>
     <input type="number" style="width: 100%; box-sizing: border-box;" bind:value={nuevaVisita.reuniones.asistencia.noAsisten} />
   </div>
 </div>
@@ -1125,7 +1132,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   {/if}
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de las Reuniones y Enseñanza:</label>
+    <label for="Análisis de las Reuniones y Ensñanza" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de las Reuniones y Enseñanza:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 150px;"
       bind:value={nuevaVisita.reuniones.observaciones}
@@ -1159,7 +1166,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   <div style="display: flex; gap: 20px; margin-bottom: 15px;">
     <div style="flex: 1;">
-      <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Inactivos en la congregación:</label>
+      <label for="Inactivos en la congregación" style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Inactivos en la congregación:</label>
       <input 
         type="number" 
         style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;" 
@@ -1167,7 +1174,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       />
     </div>
     <div style="flex: 1;">
-      <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Cantidad de sacados:</label>
+      <label for="Cantidad de sacados" style="display: block; font-size: 0.85rem; font-weight: bold; color: #4a5568; margin-bottom: 5px;">Cantidad de sacados:</label>
       <input 
         type="number" 
         style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;" 
@@ -1177,7 +1184,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Pastoreo y Ayuda Espiritual:</label>
+    <label for="Análisis del Pastoreo y Ayuda Espiritual" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Pastoreo y Ayuda Espiritual:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
       bind:value={nuevaVisita.pastoreo.observaciones}
@@ -1213,7 +1220,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   {/if}
 
   <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #fdf2f8; padding: 10px; border-radius: 6px;">
-    <label style="font-size: 0.9rem; font-weight: bold; color: #b83280;">¿Se dirigen regularmente los cursos bíblicos?</label>
+    <label for="¿Se dirigen regularmente los cursos bíblicos?" style="font-size: 0.9rem; font-weight: bold; color: #b83280;">¿Se dirigen regularmente los cursos bíblicos?</label>
     <select bind:value={nuevaVisita.crecimiento.cursosRegulares} style="padding: 4px; border-radius: 4px; border: 1px solid #fed7e2;">
         <option value={true}>Sí</option>
         <option value={false}>No / Algunos</option>
@@ -1221,7 +1228,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Crecimiento y Estudiantes:</label>
+    <label for="Análisis del Crecimiento y Estudiantes:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis del Crecimiento y Estudiantes:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
       bind:value={nuevaVisita.crecimiento.observaciones}
@@ -1263,7 +1270,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre su labor y colaboración de los SG:</label>
+    <label for="Observaciones sobre su labor y colaboración de los SG:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre su labor y colaboración de los SG:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
       bind:value={nuevaVisita.superintendenteServicio.observaciones}
@@ -1316,7 +1323,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Gestión, Inventarios (S-28) y Capacitación:</label>
+    <label for="Análisis sobre Gestión, Inventarios (S-28) y Capacitación:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Gestión, Inventarios (S-28) y Capacitación:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
       bind:value={nuevaVisita.publicaciones.observaciones}
@@ -1366,7 +1373,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   {/if}
 
   <div style="margin-bottom: 15px; background: #f9f7ff; padding: 12px; border-radius: 6px; border: 1px dashed #d6bcfa;">
-    <label style="font-size: 0.9rem; font-weight: bold; color: #553c9a; display: block; margin-bottom: 8px;">Estado general de hábitos espirituales:</label>
+    <label for="Estado general de hábitos espirituales:" style="font-size: 0.9rem; font-weight: bold; color: #553c9a; display: block; margin-bottom: 8px;">Estado general de hábitos espirituales:</label>
     <div style="display: flex; gap: 15px;">
         <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="buenos" /> Buenos / Ejempl</label>
         <label><input type="radio" bind:group={nuevaVisita.progresoEspiritual.habitosEstudio} value="mejorables" /> Nec. mejora</label>
@@ -1375,7 +1382,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis detallado sobre Familias, Jóvenes y Matrimonios:</label>
+    <label for="Análisis detallado sobre Familias, Jóvenes y Matrimonios:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis detallado sobre Familias, Jóvenes y Matrimonios:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 160px;"
       bind:value={nuevaVisita.progresoEspiritual.observaciones}
@@ -1429,7 +1436,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre el ejemplo, unidad y eficacia de los nombrados:</label>
+    <label for="Análisis sobre el ejemplo, unidad y eficacia de los nombrados:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre el ejemplo, unidad y eficacia de los nombrados:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 160px;"
       bind:value={nuevaVisita.cuerpoNombrados.observaciones}
@@ -1491,7 +1498,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Mantenimiento, Seguridad y LDC:</label>
+    <label for="Análisis sobre Mantenimiento, Seguridad y LDC:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis sobre Mantenimiento, Seguridad y LDC:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
       bind:value={nuevaVisita.localReunion.observaciones}
@@ -1524,7 +1531,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   {/if}
 
   <div style="margin-bottom: 15px; background: #edf2f7; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
-    <label style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Existe un plan de ayuda definido por los ancianos?</label>
+    <label for="¿Existe un plan de ayuda definido por los ancianos?" style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Existe un plan de ayuda definido por los ancianos?</label>
     <select bind:value={nuevaVisita.analisisInactivos.planAccion} style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0;">
         <option value={true}>Sí</option>
         <option value={false}>No / En proceso</option>
@@ -1532,7 +1539,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de causas y labor de ayuda:</label>
+    <label for="Análisis de causas y labor de ayuda:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Análisis de causas y labor de ayuda:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
       bind:value={nuevaVisita.analisisInactivos.observaciones}
@@ -1591,7 +1598,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre el desempeño y espíritu de los precursores:</label>
+    <label for="Observaciones sobre el desempeño y espíritu de los precursores:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre el desempeño y espíritu de los precursores:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 150px;"
       bind:value={nuevaVisita.precursoresAnalisis.observaciones}
@@ -1642,7 +1649,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre Contabilidad y Archivos:</label>
+    <label for="Observaciones sobre Contabilidad y Archivos:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Observaciones sobre Contabilidad y Archivos:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
       bind:value={nuevaVisita.contabilidad.observaciones}
@@ -1694,7 +1701,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #c53030;">Descripción detallada del problema y medidas tomadas:</label>
+    <label for="Descripción detallada del problema y medidas tomadas:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #c53030;">Descripción detallada del problema y medidas tomadas:</label>
     <textarea 
       style="width: 100%; border: 1px solid #feb2b2; border-radius: 6px; padding: 10px; min-height: 140px; background-color: #fff;"
       bind:value={nuevaVisita.problemasGraves.observaciones}
@@ -1728,7 +1735,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   {/if}
 
   <div style="margin-bottom: 15px; background: white; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
-    <label style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Quedan temas pendientes para la próxima visita?</label>
+    <label for="¿Quedan temas pendientes para la próxima visita?" style="font-size: 0.9rem; font-weight: bold; color: #4a5568;">¿Quedan temas pendientes para la próxima visita?</label>
     <select bind:value={nuevaVisita.miscelaneos.temasPendientes} style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0;">
         <option value={false}>No, todo concluido</option>
         <option value={true}>Sí, anotar en el análisis</option>
@@ -1736,7 +1743,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   </div>
 
   <div style="margin-top: 10px;">
-    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Otros temas y observaciones adicionales:</label>
+    <label for="Otros temas y observaciones adicionales:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem;">Otros temas y observaciones adicionales:</label>
     <textarea 
       style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 120px;"
       bind:value={nuevaVisita.miscelaneos.observaciones}
@@ -1772,7 +1779,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
     
     <div style="background: #ffffff; border: 1px solid #bee3f8; padding: 15px; border-radius: 8px; border-left: 5px solid #3182ce; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-      <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color: #2b6cb0;">
+      <label for="Sugerencias del Cuerpo de Ancianos (para mencionar):" style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color: #2b6cb0;">
         📢 Sugerencias del Cuerpo de Ancianos (para mencionar):
       </label>
       <textarea 
@@ -1783,7 +1790,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     </div>
 
     <div>
-      <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Textos bíblicos seleccionados:</label>
+      <label for="Textos bíblicos seleccionados:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Textos bíblicos seleccionados:</label>
       <input 
         type="text" 
         style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px;"
@@ -1793,7 +1800,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     </div>
 
     <div>
-      <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Esquema y puntos clave personales:</label>
+      <label for="Esquema y puntos clave personales:" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #334155;">Esquema y puntos clave personales:</label>
       <textarea 
         style="width: 100%; border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px; min-height: 140px;"
         bind:value={nuevaVisita.ideasDiscursos.puntosClave}
@@ -1830,13 +1837,13 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     <div style="background: white; border: 1px solid #fed7d7; padding: 15px; border-radius: 6px;">
       <h4 style="font-size: 0.9rem; color: #9b2c2c; margin-bottom: 10px; font-weight: bold;">Vida y Ministerio Cristianos</h4>
       
-      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Procedimiento de asignaciones (S-89/Tablero):</label>
+      <label for="Procedimiento de asignaciones (S-89/Tablero):" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Procedimiento de asignaciones (S-89/Tablero):</label>
       <textarea 
         style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; margin-bottom: 10px; min-height: 60px;"
         bind:value={nuevaVisita.observacionesReuniones.vidaMinisterio.asignacionesS89}
         placeholder="Anote sus sugerencias sobre el orden y la prontitud..."></textarea>
 
-      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Función del consejero auxiliar:</label>
+      <label for="Función del consejero auxiliar:" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Función del consejero auxiliar:</label>
       <textarea 
         style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; min-height: 60px;"
         bind:value={nuevaVisita.observacionesReuniones.vidaMinisterio.consejeroAuxiliar}
@@ -1845,7 +1852,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
     <div style="background: white; border: 1px solid #fed7d7; padding: 15px; border-radius: 6px;">
       <h4 style="font-size: 0.9rem; color: #9b2c2c; margin-bottom: 10px; font-weight: bold;">Reunión del Fin de Semana</h4>
-      <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Estudio de La Atalaya:</label>
+      <label for="Estudio de La Atalaya:" style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Estudio de La Atalaya:</label>
       <textarea 
         style="width: 100%; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px; min-height: 80px;"
         bind:value={nuevaVisita.observacionesReuniones.finDeSemana.estudioAtalaya}
@@ -1953,20 +1960,25 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     <span>Color de acento:</span>
     <div class="selector-colores">
       <button 
-        class="color-dot" 
-        style="background: #b63a3a;" 
-        onclick={() => $colorAcento = '#b63a3a'}
-        class:activo={$colorAcento === '#b63a3a'}></button>
-      <button 
-        class="color-dot" 
-        style="background: #2b6cb0;" 
-        onclick={() => $colorAcento = '#2b6cb0'}
-        class:activo={$colorAcento === '#2b6cb0'}></button>
-      <button 
-        class="color-dot" 
-        style="background: #2d3748;" 
-        onclick={() => $colorAcento = '#2d3748'}
-        class:activo={$colorAcento === '#2d3748'}></button>
+  class="color-dot" 
+  style="background: #b63a3a;" 
+  aria-label="Cambiar color de acento a rojo"
+  onclick={() => $colorAcento = '#b63a3a'}
+  class:activo={$colorAcento === '#b63a3a'}></button>
+
+<button 
+  class="color-dot" 
+  style="background: #2b6cb0;" 
+  aria-label="Cambiar color de acento a azul"
+  onclick={() => $colorAcento = '#2b6cb0'}
+  class:activo={$colorAcento === '#2b6cb0'}></button>
+
+<button 
+  class="color-dot" 
+  style="background: #2d3748;" 
+  aria-label="Cambiar color de acento a gris oscuro"
+  onclick={() => $colorAcento = '#2d3748'}
+  class:activo={$colorAcento === '#2d3748'}></button>
     </div>
   </div>
 </section>
@@ -1994,46 +2006,8 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   .acciones { display: flex; gap: 10px; margin-bottom: 15px; }
   .acciones button { padding: 8px 15px; border-radius: 20px; border: 1px solid #ccc; background: white; cursor: pointer; }
   .acciones button.activo { background: #ede9fb; border-color: #5b4cc4; color: #5b4cc4; font-weight: bold; }
-  
-  .tab.table-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: visible; /* IMPORTANTE: Permite que el menú "salga" hacia abajo */
-  background: white;
-  position: relative;
-}
-  .tabla-profesional { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 700px; }
-  .tabla-profesional th { background-color: #ffffff; color: #333; font-weight: 600; text-align: left; padding: 12px 15px; border-bottom: 2px solid #edf2f7; }
-  .tabla-profesional td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #4a5568; }
 
   .btn-tabla-accion { background: white; color: #2d3748; border: 1px solid #cbd5e0; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; }
-  
-  .menu-flotante {
-  position: absolute;
-  right: 0;           /* Alineado a la derecha del botón */
-  top: 40px;          /* Un poco hacia abajo del botón */
-  z-index: 999;       /* Por encima de todo */
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2); /* Sombra más fuerte para que se vea que flota */
-  min-width: 250px;
-  padding: 0;
-}
-  .menu-header { padding: 12px; font-weight: bold; border-bottom: 1px solid #eee; }
-  .menu-acciones { display: flex; justify-content: space-between; padding: 10px; gap: 10px; }
-  .opcion-editar { border: 1px solid #333; background: white; padding: 6px; cursor: pointer; font-weight: bold; flex: 1; }
-  .opcion-eliminar { border: 1px solid #ff4d4d; color: #ff4d4d; background: white; padding: 6px; cursor: pointer; font-weight: bold; flex: 1; }
-
-  .overlay-invisible {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 998; /* Justo debajo del menú flotante */
-  background: transparent;
-}
 
   .btn-primario { background: #5b4cc4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
   .btn-secundario { background: #f0f0f0; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
@@ -2094,63 +2068,10 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     align-items: center;
   }
 
-  .contenedor-buscador-visitas {
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  .input-con-lupa {
-    position: relative;
-    width: 100%;
-    max-width: 300px; /* Ancho controlado */
-    display: flex;
-    align-items: center;
-  }
-
-  .input-con-lupa svg {
-    position: absolute;
-    left: 12px;
-  }
-
-  .input-con-lupa input {
-    width: 100%;
-    padding: 10px 10px 10px 40px;
-    border: 1px solid #ddd;
-    border-radius: 20px; /* Bordes redondeados modernos */
-    font-size: 0.9rem;
-    outline: none;
-  }
-
-  .input-con-lupa input:focus {
-    border-color: #5b4cc4;
-    box-shadow: 0 0 0 3px rgba(91, 76, 196, 0.1);
-  }
-
-  /* Estilo para que el grid de días se vea bien en móviles */
-  .grid-dias-horarios {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 10px;
-  }
-
   /* Efecto visual cuando pasas el ratón por encima del botón de preguntas */
   button[type="button"]:hover {
     background-color: #e2e8f0 !important;
     transition: background-color 0.2s;
-  }
-
-  /* Estilo para los inputs de hora */
-  input[type="text"].input-hora-mini {
-    border: 1px solid #cbd5e0;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-family: monospace;
-    outline-color: #3182ce;
-    /* --- AQUÍ AÑADIMOS EL CONTROL DE ANCHO --- */
-    max-width: 100px; 
-    width: 100%; /* Para que intente ser pequeño pero se ajuste si el padre es menor */
   }
 
   /* Mejora de los labels de los días */
@@ -2263,29 +2184,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   color: white;
   border: 1px solid #4a5568;
 }
-
-/* Contenedor de botones para que no floten desordenados */
-  .acciones-tabla {
-    display: flex;
-    gap: 8px;
-    justify-content: center; /* Centra los botones en la celda */
-    align-items: center;
-  }
-
-  /* Estilo base para que AMBOS botones midan exactamente lo mismo */
-  .btn-accion {
-    flex: 1; /* Hace que crezcan igual */
-    min-width: 85px; /* Evita que se encojan demasiado */
-    max-width: 100px;
-    padding: 6px 0;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-    text-align: center;
-  }
-
   /* Botón Editar - Estilo neutral */
   .btn-editar {
     background-color: #f1f5f9;
@@ -2312,13 +2210,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     transition: all 0.2s ease;
     padding: 0;
   }
-  /* Estilo del icono SVG */
-  .icono-borrar {
-    width: 18px;  /* Ajusta el tamaño aquí */
-    height: 18px;
-    /* Si tu SVG es negro y lo quieres rojo, puedes usar este filtro: */
-    filter: invert(24%) sepia(87%) saturate(2333%) hue-rotate(337deg) brightness(88%) contrast(93%);
-  }
 
   /* Efecto al pasar el ratón */
   .btn-borrar:hover {
@@ -2326,22 +2217,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     transform: scale(1.1);
     border-color: #fca5a5;
   }
-
-  /* Ajuste para que la tabla ocupe todo el ancho */
-  .tabla {
-    width: 90%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-
-  .tabla th, .tabla td {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-  }
-
-  .text-center { text-align: center !important; }
-
   /* Contenedor del botón superior */
   .header-tabla {
     display: flex;
@@ -2438,67 +2313,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   
   :global(body.dark-mode) .stat-label {
     color: #94a3b8;
-  }
-
-  /* --- SECCIÓN AGENDA REFECCIONADA --- */
-  /* Contenedor principal */
-  /* 1. EL CONTENEDOR: Forzamos que sea una sola fila pase lo que pase */
-  .input-container {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 12px !important;
-    align-items: center !important;
-    width: 90% !important;
-    margin-bottom: 25px;
-  }
-
-  /* 2. EL CUADRO DE TEXTO: Le damos permiso para crecer y ocupar todo */
-  .input-texto {
-    flex: 1 1 auto !important; /* Crece para llenar el hueco */
-    height: 45px !important;
-    padding: 0 15px !important;
-    border: 1px solid #e0e0e0 !important;
-    border-radius: 12px !important;
-    background-color: #ffffff !important;
-    font-size: 15px !important;
-    min-width: 100px !important; /* Para que no desaparezca */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    outline: none !important;
-  }
-
-  /* 3. EL SELECTOR DE FECHA: Lo "congelamos" para que no se estire */
-  .input-fecha-hora {
-    flex: 0 0 210px !important; /* No crece, no se encoge, mide exactamente 210px */
-    height: 45px !important;
-    padding: 0 10px !important;
-    border: 1px solid #e0e0e0 !important;
-    border-radius: 12px !important;
-    background-color: #ffffff !important;
-    font-size: 14px !important;
-    cursor: pointer !important;
-  }
-
-  /* 4. EL BOTÓN: También lo dejamos fijo y bonito */
-  .btn-add {
-    flex: 0 0 100px !important; /* Ancho fijo de 100px */
-    height: 45px !important;
-    background: linear-gradient(135deg, #b63a3a, #962f2f) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 12px !important;
-    font-weight: 600 !important;
-    cursor: pointer !important;
-    box-shadow: 0 4px 6px rgba(182, 58, 58, 0.2) !important;
-  }
-
-  /* Efecto al pasar el ratón */
-  .btn-add:hover {
-    transform: translateY(-1px) !important;
-    filter: brightness(1.1) !important;
-  }
-
-  .btn-add:active {
-    transform: translateY(0);
   }
 
   .tarea-card {
@@ -2688,17 +2502,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     text-align: right;
     padding-right: 20px;
   }
-  .contenedor {
-    display: grid;
-    grid-template-columns: 1fr; /* Una columna en móvil */
-  }
 
   /* Tablets y pantallas medianas (768px en adelante) */
   @media (min-width: 768px) {
-    .contenedor {
-      grid-template-columns: 1fr 1fr; /* Dos columnas */
-    }
-
     /* Añadimos aquí lo de la agenda para que se ponga en fila en tablets/PC */
     .agenda-input-texto { flex: 1 !important; }
     .agenda-input-fecha { flex: 0 0 220px !important; }
@@ -2707,33 +2513,12 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   /* Computadoras (1024px en adelante) */
   @media (min-width: 1024px) {
-    .contenedor {
-      grid-template-columns: 1fr 1fr 1fr 1fr; /* Cuatro columnas */
-    }
+ 
   }
 
   /* --- AJUSTE DE PRECISIÓN: MÓDULO 7 Y DÍAS --- */
 @media (max-width: 600px) {
 
-  /* 1. MÓDULO 7: Solo los textos largos de los círculos (radios) */
-  /* Usamos un selector que solo afecte a las opciones que tienen texto largo */
-  .config-card label:has(input[type="radio"]) {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-    width: 100% !important;
-    white-space: normal !important; /* Permite que el texto baje de línea */
-    margin-bottom: 12px !important;
-  }
-
-  /* 2. DÍAS DE LA SEMANA: Solo para los cuadritos (checkboxes) */
-  /* Buscamos el contenedor que tiene muchos checkboxes juntos (los días) */
-  .config-card div:has(> label > input[type="checkbox"]) {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important; /* Dos columnas: Lun | Mar */
-    gap: 8px !important;
-    width: 100% !important;
-  }
   /* 3. PROTECCIÓN: Evitamos que los módulos se pongan uno al lado del otro */
   /* Forzamos a que cada tarjeta ocupe su propia línea siempre */
   .config-card, section, .form-grande {
