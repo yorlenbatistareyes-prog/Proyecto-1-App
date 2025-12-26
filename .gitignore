@@ -21,3 +21,9 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Rust / Tauri (Aquí están los 6 GB)
+src-tauri/target/
+
+# Archivos de bloqueo de Rust
+Cargo.lock

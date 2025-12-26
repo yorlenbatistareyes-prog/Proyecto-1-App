@@ -1,0 +1,143 @@
+{
+  "agenda": [
+    {
+      "completada": false,
+      "fechaVencimiento": null,
+      "id": 1766781038693,
+      "texto": "Pendiente de AEROPUERTO -HOLGUÍN: Reevaluación de SM"
+    }
+  ],
+  "ajustes": {
+    "temaOscuro": false
+  },
+  "circuitos": [
+    {
+      "idioma": "S",
+      "nombre": "HG-06",
+      "pais": "Cuba"
+    }
+  ],
+  "congregaciones": [
+    {
+      "circuito": "HG-06",
+      "ciudad": "HOLGUÍN",
+      "esLenguaSeñas": false,
+      "horaEntreSemana": "15:00",
+      "horaFinSemana": "10:00",
+      "idioma": "S",
+      "nombre": "AEROPUERTO -HOLGUÍN",
+      "numero": "12456",
+      "pais": "Cuba",
+      "provincia": "HG",
+      "reunionEntreSemana": "Martes",
+      "reunionFinSemana": "Domingo",
+      "seccion": "A",
+      "sucursal": "Cuba",
+      "telefono": ""
+    }
+  ],
+  "visitas": [
+    {
+      "analisisInactivos": {
+        "observaciones": "",
+        "planAccion": false
+      },
+      "congregacionId": "AEROPUERTO -HOLGUÍN",
+      "contabilidad": {
+        "archivosRevisados": false,
+        "contabilidadEnLinea": "no",
+        "observaciones": ""
+      },
+      "crecimiento": {
+        "cursosRegulares": false,
+        "observaciones": ""
+      },
+      "cuerpoNombrados": {
+        "observaciones": "",
+        "programaCapacitacion": false,
+        "unidadCuerpo": "buena"
+      },
+      "fecha": "2025-12-23",
+      "id": 1766781038654,
+      "ideasDiscursos": {
+        "puntosClave": "",
+        "sugerenciasAncianos": "",
+        "textosBiblicos": ""
+      },
+      "localReunion": {
+        "observaciones": "",
+        "planSeguridad": false,
+        "programaLimpieza": "si"
+      },
+      "ministerio": {
+        "observaciones": "",
+        "precursoresObs": "",
+        "programa": [],
+        "territorioObs": ""
+      },
+      "miscelaneos": {
+        "observaciones": "",
+        "temasPendientes": false
+      },
+      "observacionesFinales": "Reevaluación de SM",
+      "observacionesReuniones": {
+        "finDeSemana": {
+          "estudioAtalaya": ""
+        },
+        "vidaMinisterio": {
+          "asignacionesS89": "",
+          "consejeroAuxiliar": ""
+        }
+      },
+      "pastoreo": {
+        "inactivos": 0,
+        "observaciones": "",
+        "sacados": 0
+      },
+      "precursoresAnalisis": {
+        "apoyoAncianos": "si",
+        "horarioPractico": true,
+        "observaciones": ""
+      },
+      "problemasGraves": {
+        "nivelUrgencia": "bajo",
+        "observaciones": "",
+        "requiereIntervencionSucursal": false
+      },
+      "progresoEspiritual": {
+        "habitosEstudio": "buenos",
+        "observaciones": ""
+      },
+      "publicaciones": {
+        "excedente": "no",
+        "inventarioMensual": false,
+        "observaciones": ""
+      },
+      "reuniones": {
+        "asistencia": {
+          "estudiantes": 0,
+          "hijosTestigos": 0,
+          "inactivos": 0,
+          "noAsisten": 0,
+          "sacados": 0
+        },
+        "entreSemana": {
+          "faltan": 0,
+          "porcentaje": "",
+          "tendencia": ""
+        },
+        "finSemana": {
+          "faltan": 0,
+          "porcentaje": "",
+          "tendencia": ""
+        },
+        "observaciones": ""
+      },
+      "superintendenteServicio": {
+        "observaciones": "",
+        "visitaPeriodica": "si"
+      },
+      "tipo": "Regular"
+    }
+  ]
+}
