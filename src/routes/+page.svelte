@@ -543,10 +543,10 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
         <tbody>
           {#each $circuitos as c, index}
             <tr>
-              <td><strong>{c.nombre}</strong></td>
-              <td>{c.idioma}</td>
-              <td>{c.pais}</td>
-              <td class="celda-acciones"> 
+              <td data-label="Nombre"><strong>{c.nombre}</strong></td>
+              <td data-label="Idioma">{c.idioma}</td>
+              <td data-label="País">{c.pais}</td>
+              <td data-label="Acciones" class="celda-acciones"> 
                 <div class="grupo-botones" style="display: flex; gap: 8px;">
                   <button class="btn-tabla btn-editar" onclick={() => editarCircuito(c, index)} style="display: flex; align-items: center; gap: 4px;">
                     <Pencil size={14} /> Editar
@@ -579,7 +579,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
           <button class="btn-primario" onclick={guardarCircuito}>Guardar</button>
         </div>
       </div>
-    {/if}
+    {/if} 
   </Panel>
 {/if}
  
@@ -804,34 +804,32 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
         </button>
       </div>
 
-      <div style="width: 100%; background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
-  <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+      <div class="contenedor-tabla-visitas">
+  <table class="tabla-estilizada">
     <thead>
-      <tr style="background-color: #f8fafc;">
-        <th style="width: 20%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Fecha</th>
-        <th style="width: 40%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Congregación</th>
-        <th style="width: 15%; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Tipo</th>
-        <th style="width: 25%; padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0; font-size: 0.85rem; color: #64748b;">Acciones</th>
+      <tr>
+        <th>Fecha</th>
+        <th>Congregación</th>
+        <th>Tipo</th>
+        <th class="col-acciones">Acciones</th>
       </tr>
     </thead>
     <tbody>
-            {#each visitasFiltradas as v}
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 10px 12px; font-family: monospace; font-size: 0.9rem;">{v.fecha}</td>
-          <td style="padding: 10px 12px; font-weight: bold; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{v.congregacionId}</td>
-          <td style="padding: 10px 12px; font-size: 0.9rem;">{v.tipo}</td>
-          <td style="padding: 10px 12px;">
-            <div style="display: flex; gap: 6px; justify-content: center;">
+      {#each visitasFiltradas as v}
+        <tr>
+          <td data-label="Fecha">{v.fecha}</td>
+          <td data-label="Congregación" style="font-weight: bold;">{v.congregacionId}</td>
+          <td data-label="Tipo">{v.tipo}</td>
+          <td data-label="Acciones" class="celda-acciones">
+            <div class="grupo-botones">
               <button 
-                class="btn-tabla-accion" 
-                style="padding: 4px 6px; cursor: pointer; border: 1px solid #d1d5db; background: white; border-radius: 4px; font-size: 0.75rem; font-weight: bold; white-space: nowrap;"
+                class="btn-tabla btn-editar" 
                 onclick={() => cargarVisitaParaVer(v)}
               >
                 VER INFORME
               </button>
               <button 
-                type="button"
-                style="padding: 4px 6px; cursor: pointer; background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; font-size: 0.75rem; white-space: nowrap;"
+                class="btn-tabla btn-eliminar" 
                 onclick={() => eliminarVisita(v.id)}
               >
                 ELIMINAR
@@ -840,9 +838,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
           </td>
         </tr>
       {/each}
-          </tbody>
-        </table>
-      </div> 
+    </tbody>
+  </table>
+</div>
       
     {:else}
       <div class="form-grande">
@@ -2518,30 +2516,85 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   }
 
   /* --- AJUSTE DE PRECISIÓN: MÓDULO 7 Y DÍAS --- */
+/* --- AJUSTE DE PRECISIÓN: MÓDULO MÓVIL Y TARJETAS --- */
 @media (max-width: 600px) {
 
-  /* 3. PROTECCIÓN: Evitamos que los módulos se pongan uno al lado del otro */
-  /* Forzamos a que cada tarjeta ocupe su propia línea siempre */
+  /* 1. TRANSFORMACIÓN DE TABLA A TARJETAS */
+  .tabla-estilizada, 
+  .tabla-estilizada thead, 
+  .tabla-estilizada tbody, 
+  .tabla-estilizada th, 
+  .tabla-estilizada td, 
+  .tabla-estilizada tr { 
+    display: block !important; 
+    width: 100% !important;
+  }
+
+  /* Escondemos los encabezados de la tabla */
+  .tabla-estilizada thead tr { 
+    display: none !important; 
+  }
+
+  /* Cada fila ahora es una tarjeta independiente */
+  .tabla-estilizada tr { 
+    background: white;
+    margin-bottom: 15px !important;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-sizing: border-box;
+  }
+
+  /* Estilo de cada fila de datos dentro de la tarjeta */
+  .tabla-estilizada td { 
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center;
+    padding: 10px 5px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    text-align: right !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* La celda de acciones se centra al final de la tarjeta */
+  .celda-acciones {
+    border-bottom: none !important;
+    justify-content: center !important;
+    padding-top: 15px !important;
+    width: 100% !important;
+  }
+
+  /* Inyectamos el nombre de la columna a la izquierda */
+  .tabla-estilizada td::before { 
+    content: attr(data-label); 
+    font-weight: bold;
+    color: #64748b;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  /* 2. PROTECCIÓN DE CONTENEDORES (Tu código existente mejorado) */
   .config-card, section, .form-grande {
     display: block !important; 
     width: 100% !important;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     margin: 10px 0 !important;
     box-sizing: border-box !important;
   }
 
-  /* 4. TAMAÑO DE BOTONES: Que no se estiren */
-  input[type="radio"], input[type="checkbox"] {
-    width: 20px !important;
-    height: 20px !important;
-    flex-shrink: 0 !important;
-    margin-right: 8px !important;
-  }
-  /* 5. CAMPOS DE TEXTO: Que se ajusten al ancho de su tarjeta */
+  /* 3. AJUSTE DE INPUTS Y BOTONES */
   input:not([type="radio"]):not([type="checkbox"]), select, textarea {
     width: 100% !important;
     max-width: 100% !important;
     display: block !important;
+  }
+
+  .grupo-botones {
+    width: 100%;
+    justify-content: center !important;
   }
 }
 </style>
