@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { invoke } from '@tauri-apps/api/core';
+
   import { generarPDFIndividual, generarPDFListado } from '$lib/utils/pdfGenerator';
   import { moldeCongregacion, eliminarCongregacion, procesarGuardadoCongregacion } from '$lib/congregaciones';
   import Panel from '$lib/components/Panel.svelte';
@@ -103,25 +105,52 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     tareas = tareas.filter(t => t.id !== id);
   }
 
-  onMount(() => {
-    const backup = localStorage.getItem('agenda_av');
-    if (backup) {
-      try { 
-        const datos = JSON.parse(backup);
-        // Aseguramos que los datos viejos sin fecha no rompan nada
-        tareas = datos.map((t: any) => ({
+  onMount(async () => {
+  try {
+    // Pedimos a Rust el paquete completo de datos
+    const datos: any = await invoke('cargar_todo_desde_disco');
+    
+    if (datos) {
+      // Cargamos los Stores (Circuitos, Congresis y Visitas)
+      $circuitos = datos.circuitos || [];
+      $congregaciones = datos.congregaciones || [];
+      $visitasStore = datos.visitas || [];
+      $temaOscuro = datos.ajustes?.temaOscuro || false;
+
+      // Cargamos la Agenda (Tareas) con tu lógica de seguridad para fechas
+      if (datos.agenda) {
+        tareas = datos.agenda.map((t: any) => ({
           ...t,
           fechaVencimiento: t.fechaVencimiento || null
         }));
-      } catch (e) { 
-        console.error("Error al cargar agenda:", e); 
       }
+      console.log("✅ Toda la base de datos cargada desde Rust");
     }
-  });
+  } catch (e) {
+    console.log("Iniciando sin datos previos o archivo no encontrado.");
+  }
+});
 
   $effect(() => {
-    localStorage.setItem('agenda_av', JSON.stringify(tareas));
-  });
+  // Esta función se activa automáticamente cuando cambian estos datos
+  const sincronizar = async () => {
+    const estadoCompleto = {
+      circuitos: $circuitos,
+      congregaciones: $congregaciones,
+      visitas: $visitasStore,
+      agenda: tareas,
+      ajustes: { temaOscuro: $temaOscuro }
+    };
+
+    try {
+      await invoke('guardar_todo_en_disco', { estado: estadoCompleto });
+    } catch (error) {
+      console.error("Error al sincronizar con Rust:", error);
+    }
+  };
+
+  sincronizar();
+});
 
   // Lógica de Visitas Recientes
   let visitasRecientes = $derived(
@@ -213,63 +242,74 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   }
 
   /* LÓGICA: CONFIGURACIÓN Y BACKUP */
-  function exportarBackup() {
-    // 1. Consolidamos todos los datos existentes en los stores
-    const backup = {
-      circuitos: $circuitos,
-      congregaciones: $congregaciones,
-      visitas: $visitasStore,
-      fechaExportacion: new Date().toISOString(),
-      metadata: { app: "Asistente de Visitas", version: "1.0.0" }
-    };
-
-    // 2. Creación del archivo descargable
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    const nombreFecha = new Date().toISOString().split('T')[0]; // Ejemplo: 2025-12-23
-    link.download = `backup_circuito_${nombreFecha}.json`;
-    link.href = url;
-    
-    // 3. Ejecución de la descarga
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function importarBackup(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string);
-        
-        // Validación mínima de estructura
-        if (data.congregaciones && data.visitas) {
-          if (confirm("¿Importar respaldo? Se sobrescribirán los datos actuales.")) {
-            $circuitos = data.circuitos || [];
-            $congregaciones = data.congregaciones;
-            $visitasStore = data.visitas;
-            alert("Restauración completada con éxito.");
-          }
-        }
-      } catch (err) {
-        alert("El archivo no es un respaldo válido.");
+  async function exportarBackup() {
+    try {
+      const mensaje = await invoke('exportar_datos');
+      mostrarToast(`✅ ${mensaje}`); 
+    } catch (error) {
+      if (error !== "Cancelado por el usuario" && error !== "Exportación cancelada") {
+        console.error("Error al exportar:", error);
+        mostrarToast("❌ Error al exportar los datos", "error");
       }
-    };
-    reader.readAsText(file);
-    input.value = ''; // Resetear el input
+    }
   }
 
-  function limpiarTodo() {
+  async function importarBackup() {
+    try {
+      // 1. Añadimos ': any' aquí para quitar los 6 errores de la lista
+      const datos: any = await invoke('importar_datos_nativa');
+      
+      if (datos && confirm("¿Importar respaldo? Se sobrescribirán los datos actuales.")) {
+        // Ahora estos ya no marcarán error
+        $circuitos = datos.circuitos || [];
+        $congregaciones = datos.congregaciones || [];
+        $visitasStore = datos.visitas || [];
+        
+        if (datos.agenda) {
+          // También añadimos '(t: any)' para quitar el último aviso
+          tareas = datos.agenda.map((t: any) => ({
+            ...t,
+            fechaVencimiento: t.fechaVencimiento || null
+          }));
+        }
+        
+        mostrarToast("✅ Datos importados correctamente");
+      }
+    } catch (error) {
+      if (error !== "Importación cancelada") {
+        console.error("Error al importar:", error);
+        mostrarToast("❌ No se pudo importar el archivo", "error");
+      }
+    }
+  }
+
+  async function limpiarTodo() {
     if (confirm("⚠️ ¿Borrar TODOS los datos de la aplicación definitivamente?")) {
+      // 1. Limpiamos los datos en la pantalla
       $circuitos = [];
       $congregaciones = [];
       $visitasStore = [];
-      alert("La base de datos ha sido vaciada.");
+      tareas = []; // No olvides limpiar también la agenda
+
+      // 2. Preparamos el "paquete vacío" para Rust
+      const estadoVacio = {
+        circuitos: [],
+        congregaciones: [],
+        visitas: [],
+        agenda: [],
+        ajustes: { temaOscuro: $temaOscuro }
+      };
+
+      try {
+        // 3. Le ordenamos a Rust que borre el archivo físico guardando el vacío
+        await invoke('guardar_todo_en_disco', { estado: estadoVacio });
+        
+        // 4. Usamos tu sistema de notificaciones en lugar de un alert simple
+        mostrarToast("🗑️ La base de datos ha sido vaciada por completo", "error");
+      } catch (error) {
+        console.error("Error al limpiar el disco:", error);
+        alert("Los datos se borraron de pantalla, pero hubo un error al limpiar el archivo.");
+      }
     }
   }
 
@@ -1922,12 +1962,13 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
         <p>Copia de seguridad y restauración (útil para mover datos entre PCs)</p>
         <div class="acciones-datos">
           <button class="btn-config" onclick={exportarBackup}>
-            📥 Exportar Backup (JSON)
+           📥 Exportar Backup (JSON)
           </button>
-          <button class="btn-config btn-secundario" onclick={() => document.getElementById('importar')?.click()}>
-            📤 Importar Datos
+
+          <button class="btn-config btn-secundario" onclick={importarBackup}>
+           📤 Importar Datos
           </button>
-          <input type="file" id="importar" style="display: none;" onchange={importarBackup} />
+  
         </div>
       </section>
 
