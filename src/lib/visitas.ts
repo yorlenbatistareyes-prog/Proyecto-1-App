@@ -5,9 +5,10 @@ import type { Visita } from '$lib/types';
 
 // 1. El Molde Gigante (Sacado de tu código)
 export const moldeVisita: Visita = {
+    id: 0,
     fecha: '',
     congregacionId: '',
-    tipo: 'Ordinaria',
+    tipo: 'Regular',
     ministerio: { observaciones: '', territorioObs: '', precursoresObs: '', programa: [] },
     reuniones: { 
       asistencia: { estudiantes: 0, sacados: 0, inactivos: 0, hijosTestigos: 0, noAsisten: 0 },

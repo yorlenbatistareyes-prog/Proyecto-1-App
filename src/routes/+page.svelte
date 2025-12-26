@@ -868,8 +868,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
           <div class="campo">
             <label for="v-tipo">Tipo de Visita</label>
             <select id="v-tipo" bind:value={nuevaVisita.tipo} class="select-estilizado">
-              <option value="Ordinaria">Ordinaria</option>
-              <option value="Especial">Especial</option>
+              <option value="Regular">Regular</option>
+              <option value="Pastoreo">Pastoreo</option>
+              <option value="Entrenamiento">Entrenamiento</option>
             </select>
           </div>
         </div>

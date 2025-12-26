@@ -141,7 +141,7 @@ export function generarPDFIndividual(visita: any) {
         ["Estudio de la Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
     ]);
 
-    doc.save(`Informe_Visita_${visita.congregacionId}.pdf`);
+    doc.save(`Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`);
 }
 
 // Añade esta función a tu pdfGenerator.ts
