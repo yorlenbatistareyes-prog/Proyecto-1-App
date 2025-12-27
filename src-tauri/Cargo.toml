@@ -1,8 +1,8 @@
 [package]
-name = "app"
+name = "asistente-visitas"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Asistente de visitas"
+authors = ["Yorlen Batista"]
 license = ""
 repository = ""
 edition = "2021"
