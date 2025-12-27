@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "proyecto-1-app",
+  "productName": "Asistente de visitas",
   "version": "0.1.0",
-  "identifier": "com.yorlen.proyecto1",
+  "identifier": "com.asistente.visitas",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
