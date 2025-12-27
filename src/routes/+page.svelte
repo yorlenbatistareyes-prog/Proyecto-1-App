@@ -28,6 +28,39 @@
     }
   });
 
+  async function ejecutarExportacion() {
+  try {
+    // Llamamos exactamente al nombre que tienes en Rust: exportar_datos
+    const respuesta = await invoke('exportar_datos');
+    alert(respuesta); // Mostrará "Copia de seguridad creada con éxito"
+  } catch (error) {
+    // Si el usuario cancela o hay error, Rust devuelve un Err que cae aquí
+    console.warn("Aviso:", error);
+    if (error !== "Exportación cancelada") {
+      alert("Error: " + error);
+    }
+  }
+}
+
+async function ejecutarImportacion() {
+  try {
+    // Llamamos a Rust para que abra el buscador de archivos y lea el JSON
+    const datosImportados = await invoke<any>('importar_datos_nativa');
+    
+    // Aquí actualizas tus stores con los datos que devuelve Rust
+    $circuitos = datosImportados.circuitos;
+    $congregaciones = datosImportados.congregaciones;
+    $visitasStore = datosImportados.visitas;
+    
+    alert("✅ Datos importados correctamente");
+  } catch (error) {
+    console.warn("Aviso:", error);
+    if (error !== "Importación cancelada") {
+      alert("Error al importar: " + error);
+    }
+  }
+}
+
   // --- LÓGICA DE INFORMES (Ajuste 2) ---
   let visitasMesActual = $derived.by(() => {
     const ahora = new Date();
@@ -424,13 +457,11 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
  async function exportarDatos(formato: 'csv' | 'pdf') {
-  // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
   if (visitasFiltradas.length === 0) {
     return alert('No hay datos registrados para exportar.');
   }
 
   if (formato === 'pdf') {
-    // Llamamos a la lógica externa
     await generarPDFListado(visitasFiltradas);
   } else {
     // CSV usando Tauri
@@ -448,7 +479,9 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     const contenidoFinal = BOM + contenido;
     
     try {
+      // IMPORTANTE: Asegúrate de que 'save' esté importado de '@tauri-apps/plugin-dialog'
       const rutaGuardado = await save({
+        title: 'Guardar Informe CSV', // Añadimos título para forzar la respuesta del sistema
         defaultPath: 'Informe_Visitas.csv',
         filters: [{
           name: 'CSV',
@@ -457,11 +490,14 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       });
       
       if (rutaGuardado) {
+        // IMPORTANTE: Usamos writeTextFile de '@tauri-apps/plugin-fs'
         await writeTextFile(rutaGuardado, contenidoFinal);
         mostrarToast('✅ CSV exportado correctamente');
       }
     } catch (error) {
-      console.error('Error al exportar CSV:', error);
+      // Esto te dirá exactamente qué permiso falta si vuelve a fallar
+      console.error('Error detallado:', error);
+      alert(`Error de sistema: ${error}`); 
       mostrarToast('❌ Error al exportar CSV', 'error');
     }
   }
@@ -1987,15 +2023,15 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       <section class="config-card">
         <h3>📦 Gestión de Datos</h3>
         <p>Copia de seguridad y restauración (útil para mover datos entre PCs)</p>
+        
         <div class="acciones-datos">
-          <button class="btn-config" onclick={exportarBackup}>
-           📥 Exportar Backup (JSON)
+          <button class="btn-config" onclick={ejecutarExportacion}>
+            📥 Exportar Backup (JSON)
           </button>
 
-          <button class="btn-config btn-secundario" onclick={importarBackup}>
-           📤 Importar Datos
+          <button class="btn-config btn-secundario" onclick={ejecutarImportacion}>
+            📤 Importar Datos
           </button>
-  
         </div>
       </section>
 
@@ -2012,54 +2048,54 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       </section>
 
       <section class="config-card">
-  <h3>🎨 Apariencia</h3>
-  <p>Personaliza los colores y el estilo visual de tu asistente.</p>
-  
-  <div class="config-item">
-    <span>Tema del sistema:</span>
-    <select class="select-estilizado" bind:value={$temaOscuro}>
-      <option value={false}>☀️ Modo Claro</option>
-      <option value={true}>🌙 Modo Oscuro</option>
-    </select>
-  </div>
+        <h3>🎨 Apariencia</h3>
+        <p>Personaliza los colores y el estilo visual de tu asistente.</p>
+        
+        <div class="config-item">
+          <span>Tema del sistema:</span>
+          <select class="select-estilizado" bind:value={$temaOscuro}>
+            <option value={false}>☀️ Modo Claro</option>
+            <option value={true}>🌙 Modo Oscuro</option>
+          </select>
+        </div>
 
-  <div class="config-item" style="margin-top: 15px;">
-    <span>Color de acento:</span>
-    <div class="selector-colores">
-      <button 
-  class="color-dot" 
-  style="background: #b63a3a;" 
-  aria-label="Cambiar color de acento a rojo"
-  onclick={() => $colorAcento = '#b63a3a'}
-  class:activo={$colorAcento === '#b63a3a'}></button>
+        <div class="config-item" style="margin-top: 15px;">
+          <span>Color de acento:</span>
+          <div class="selector-colores">
+            <button 
+              class="color-dot" 
+              style="background: #b63a3a;" 
+              aria-label="Cambiar color de acento a rojo"
+              onclick={() => $colorAcento = '#b63a3a'}
+              class:activo={$colorAcento === '#b63a3a'}></button>
 
-<button 
-  class="color-dot" 
-  style="background: #2b6cb0;" 
-  aria-label="Cambiar color de acento a azul"
-  onclick={() => $colorAcento = '#2b6cb0'}
-  class:activo={$colorAcento === '#2b6cb0'}></button>
+            <button 
+              class="color-dot" 
+              style="background: #2b6cb0;" 
+              aria-label="Cambiar color de acento a azul"
+              onclick={() => $colorAcento = '#2b6cb0'}
+              class:activo={$colorAcento === '#2b6cb0'}></button>
 
-<button 
-  class="color-dot" 
-  style="background: #2d3748;" 
-  aria-label="Cambiar color de acento a gris oscuro"
-  onclick={() => $colorAcento = '#2d3748'}
-  class:activo={$colorAcento === '#2d3748'}></button>
-    </div>
-  </div>
-</section>
+            <button 
+              class="color-dot" 
+              style="background: #2d3748;" 
+              aria-label="Cambiar color de acento a gris oscuro"
+              onclick={() => $colorAcento = '#2d3748'}
+              class:activo={$colorAcento === '#2d3748'}></button>
+          </div>
+        </div>
+      </section>
 
       <section class="config-card">
         <h3 style="color: #dc2626;">⚠️ Zona Peligrosa</h3>
         <p>Esto borrará todas las congregaciones y visitas guardadas.</p>
         <button class="btn-eliminar" onclick={limpiarTodo}>
-          Borrrar todos los datos
+          Borrar todos los datos
         </button>
       </section>
-    </div>
+    </div> 
   </div>
-{/if}
+  {/if}
 </main>
  
 <style>
