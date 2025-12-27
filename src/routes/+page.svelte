@@ -342,7 +342,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   
   let nuevaVisita = $state({ ...moldeVisita });
 
-  function guardarVisita() {
+  async function guardarVisita() {
     if (!nuevaVisita.congregacionId || !nuevaVisita.fecha) {
       alert("Por favor, seleccione la congregación y la fecha.");
       return;
@@ -351,7 +351,16 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     // 1. Procesamos el guardado
     const esNueva = procesarGuardadoVisita(nuevaVisita);
 
-    // 2. Lógica de Tareas (CORREGIDA: observacionesFinales en español)
+    // --- NUEVO: Generar el PDF Automáticamente ---
+    try {
+      await generarPDFIndividual(nuevaVisita);
+    } catch (error) {
+      console.error("Error al generar PDF automático:", error);
+      // No bloqueamos el proceso, solo avisamos en consola
+    }
+    // ----------------------------------------------
+
+    // 2. Lógica de Tareas
     if (esNueva && nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
         const nuevoPendiente = {
             id: Date.now() + 1,
@@ -360,12 +369,12 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
             fechaVencimiento: null 
         };
         
-        // Actualizamos la variable local de tareas
         tareas = [...tareas, nuevoPendiente];
         console.log("✅ Tarea creada con éxito");
     }
 
     // 3. Limpieza y Cierre
+    mostrarToast('✅ Registro guardado e Informe PDF generado');
     creandoVisita = false; 
     nuevaVisita = { ...moldeVisita }; 
   }

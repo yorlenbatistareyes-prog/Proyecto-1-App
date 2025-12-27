@@ -13,9 +13,6 @@
     "core:window:default",
     "core:tray:default",
     "core:path:default",
-    "dialog:allow-save",
-    "fs:allow-desktop-write",
-    "fs:allow-download-write",
     "dialog:default",
     "fs:default"
   ]
