@@ -410,7 +410,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
- function exportarDatos(formato: 'csv' | 'pdf') {
+  async function exportarDatos(formato: 'csv' | 'pdf') {
     // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
     if (visitasFiltradas.length === 0) {
       return alert('No hay datos registrados para exportar.');
@@ -418,7 +418,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
     if (formato === 'pdf') {
       // Llamamos a la lógica externa
-      generarPDFListado(visitasFiltradas);
+      await generarPDFListado(visitasFiltradas);
     } else {
       // El CSV es solo texto, puede quedarse aquí
       const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
