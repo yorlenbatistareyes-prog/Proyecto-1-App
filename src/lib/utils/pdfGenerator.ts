@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
-export function generarPDFIndividual(visita: any) {
+export async function generarPDFIndividual(visita: any) {
     const doc = new jsPDF();
     let y = 20;
 
@@ -136,18 +136,40 @@ export function generarPDFIndividual(visita: any) {
         ["Comentarios Finales", visita.observacionesFinales]
     ]);
 
-    // 16. OBSERVACIONES ADICIONALES (Ejemplo: Reuniones de fin de semana)
+    // 16. OBSERVACIONES ADICIONALES
     crearTablaModulo("16. Detalles de Instrucción", [
         ["Vida y Ministerio", visita.observacionesReuniones.vidaMinisterio.asignacionesS89],
         ["Consejero Auxiliar", visita.observacionesReuniones.vidaMinisterio.consejeroAuxiliar],
         ["Estudio de la Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
     ]);
 
-    doc.save(`Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`);
+    // GUARDAR PDF usando Tauri
+    const pdfBlob = doc.output('arraybuffer');
+    const pdfBytes = new Uint8Array(pdfBlob);
+    
+    const nombreArchivo = `Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`;
+    
+    try {
+        const rutaGuardado = await save({
+            defaultPath: nombreArchivo,
+            filters: [{
+                name: 'PDF',
+                extensions: ['pdf']
+            }]
+        });
+        
+        if (rutaGuardado) {
+            await writeFile(rutaGuardado, pdfBytes);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error al guardar PDF:', error);
+        throw error;
+    }
 }
 
-// Añade esta función a tu pdfGenerator.ts
-export function generarPDFListado(visitas: any[]) {
+export async function generarPDFListado(visitas: any[]) {
     const doc = new jsPDF();
     const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
     
@@ -173,5 +195,28 @@ export function generarPDFListado(visitas: any[]) {
         alternateRowStyles: { fillColor: [245, 245, 255] }
     });
 
-    doc.save(`Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`);
+    // GUARDAR PDF usando Tauri
+    const pdfBlob = doc.output('arraybuffer');
+    const pdfBytes = new Uint8Array(pdfBlob);
+    
+    const nombreArchivo = `Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`;
+    
+    try {
+        const rutaGuardado = await save({
+            defaultPath: nombreArchivo,
+            filters: [{
+                name: 'PDF',
+                extensions: ['pdf']
+            }]
+        });
+        
+        if (rutaGuardado) {
+            await writeFile(rutaGuardado, pdfBytes);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error al guardar PDF:', error);
+        throw error;
+    }
 }
