@@ -454,8 +454,6 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     }).reverse()
   );
 
-  // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
-
 // --- COPIA Y PEGA ESTA VERSIÓN FIEL A LA SUGERENCIA ---
 
 async function exportarDatos(formato: 'csv' | 'pdf') {
