@@ -1,17 +1,14 @@
 use serde_json::Value;
 use std::fs;
-// 1. Comando para guardar: Recibe el estado de Svelte y lo escribe en un archivo
-// 1. Comando para guardar
-// 1. Comando para guardar (CORREGIDO)
+
+// Tus comandos existentes...
 #[tauri::command]
 fn guardar_todo_en_disco(app: tauri::AppHandle, estado: Value) -> Result<String, String> {
     use tauri::Manager;
     
-    // Usar la misma ruta que exportar_datos
     let app_data_dir = app.path().app_data_dir()
         .map_err(|e| format!("Error obteniendo directorio: {:?}", e))?;
     
-    // Crear el directorio si no existe
     std::fs::create_dir_all(&app_data_dir)
         .map_err(|e| format!("Error creando directorio: {}", e))?;
     
@@ -23,7 +20,6 @@ fn guardar_todo_en_disco(app: tauri::AppHandle, estado: Value) -> Result<String,
     Ok("Guardado exitoso".into())
 }
 
-// 2. Comando para cargar (CORREGIDO)
 #[tauri::command]
 fn cargar_todo_desde_disco(app: tauri::AppHandle) -> Result<Value, String> {
     use tauri::Manager;
@@ -48,13 +44,11 @@ fn cargar_todo_desde_disco(app: tauri::AppHandle) -> Result<Value, String> {
     Ok(json)
 }
 
-// 3. NUEVO: Comando para exportar (Copia de seguridad)
 #[tauri::command]
 async fn exportar_datos(app: tauri::AppHandle) -> Result<String, String> {
     use tauri_plugin_dialog::DialogExt;
     use tauri::Manager;
     
-    // Obtener el directorio de datos de la app
     let app_data_dir = app.path().app_data_dir()
         .map_err(|e| format!("Error obteniendo directorio: {:?}", e))?;
     
@@ -67,7 +61,6 @@ async fn exportar_datos(app: tauri::AppHandle) -> Result<String, String> {
         return Err("No hay datos para exportar".into());
     };
 
-    // Abrir ventana para elegir dónde guardar
     let ruta_destino = app
         .dialog()
         .file()
@@ -87,14 +80,12 @@ async fn exportar_datos(app: tauri::AppHandle) -> Result<String, String> {
 async fn importar_datos_nativa(handle: tauri::AppHandle) -> Result<Value, String> {
     use tauri_plugin_dialog::DialogExt;
 
-    // Abrimos el diálogo para seleccionar un archivo
     let archivo_seleccionado = handle
         .dialog()
         .file()
         .add_filter("JSON", &["json"])
         .blocking_pick_file();
 
-    // Si el usuario eligió algo, lo leemos
     if let Some(ruta) = archivo_seleccionado {
         let contenido = std::fs::read_to_string(ruta.to_string()).map_err(|e| e.to_string())?;
         let json: Value = serde_json::from_str(&contenido).map_err(|e| e.to_string())?;
@@ -107,8 +98,8 @@ async fn importar_datos_nativa(handle: tauri::AppHandle) -> Result<Value, String
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init())  // ⬅️ AGREGAR ESTA LÍNEA
+        .plugin(tauri_plugin_fs::init())       // ⬅️ AGREGAR ESTA LÍNEA
         .invoke_handler(tauri::generate_handler![
             guardar_todo_en_disco,
             cargar_todo_desde_disco,
