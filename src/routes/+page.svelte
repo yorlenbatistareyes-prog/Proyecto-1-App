@@ -456,15 +456,19 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
- async function exportarDatos(formato: 'csv' | 'pdf') {
+// --- COPIA Y PEGA ESTA VERSIÓN FIEL A LA SUGERENCIA ---
+
+async function exportarDatos(formato: 'csv' | 'pdf') {
+  // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
   if (visitasFiltradas.length === 0) {
     return alert('No hay datos registrados para exportar.');
   }
 
   if (formato === 'pdf') {
+    // CAMBIO FIEL: Se añade 'await' para la lógica externa
     await generarPDFListado(visitasFiltradas);
   } else {
-    // CSV usando Tauri
+    // El CSV es solo texto, se queda aquí con la lógica de Tauri que ya tienes
     const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
     const filas = visitasFiltradas.map(v => [
       v.fecha || 'N/A', 
@@ -479,9 +483,8 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     const contenidoFinal = BOM + contenido;
     
     try {
-      // IMPORTANTE: Asegúrate de que 'save' esté importado de '@tauri-apps/plugin-dialog'
       const rutaGuardado = await save({
-        title: 'Guardar Informe CSV', // Añadimos título para forzar la respuesta del sistema
+        title: 'Guardar Informe CSV',
         defaultPath: 'Informe_Visitas.csv',
         filters: [{
           name: 'CSV',
@@ -490,12 +493,10 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
       });
       
       if (rutaGuardado) {
-        // IMPORTANTE: Usamos writeTextFile de '@tauri-apps/plugin-fs'
         await writeTextFile(rutaGuardado, contenidoFinal);
         mostrarToast('✅ CSV exportado correctamente');
       }
     } catch (error) {
-      // Esto te dirá exactamente qué permiso falta si vuelve a fallar
       console.error('Error detallado:', error);
       alert(`Error de sistema: ${error}`); 
       mostrarToast('❌ Error al exportar CSV', 'error');

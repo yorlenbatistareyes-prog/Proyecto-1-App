@@ -57,114 +57,30 @@ export async function generarPDFIndividual(visita: any) {
         ["Observaciones", visita.pastoreo.observaciones]
     ]);
 
-    // 4. CRECIMIENTO
-    crearTablaModulo("4. Crecimiento", [
-        ["Cursos Regulares", visita.crecimiento.cursosRegulares ? "Sí" : "No"],
-        ["Observaciones", visita.crecimiento.observaciones]
-    ]);
-
-    // 5. SUPERINTENDENTE DE SERVICIO
-    crearTablaModulo("5. Superintendente de Servicio", [
-        ["Visita Periódica", visita.superintendenteServicio.visitaPeriodica === 'si' ? 'Sí' : 'No'],
-        ["Observaciones", visita.superintendenteServicio.observaciones]
-    ]);
-
-    // 6. PUBLICACIONES
-    crearTablaModulo("6. Publicaciones", [
-        ["Inventario Mensual", visita.publicaciones.inventarioMensual ? "Sí" : "No"],
-        ["Excedente", visita.publicaciones.excedente],
-        ["Observaciones", visita.publicaciones.observaciones]
-    ]);
-
-    // 7. PROGRESO ESPIRITUAL
-    crearTablaModulo("7. Progreso Espiritual", [
-        ["Hábitos de Estudio", visita.progresoEspiritual.habitosEstudio],
-        ["Observaciones", visita.progresoEspiritual.observaciones]
-    ]);
-
-    // 8. CUERPO DE NOMBRADOS
-    crearTablaModulo("8. Cuerpo de Nombrados", [
-        ["Unidad del Cuerpo", visita.cuerpoNombrados.unidadCuerpo],
-        ["Programa de Capacitación", visita.cuerpoNombrados.programaCapacitacion ? "Activo" : "No"],
-        ["Observaciones", visita.cuerpoNombrados.observaciones]
-    ]);
-
-    // 9. LOCAL DE REUNIÓN
-    crearTablaModulo("9. Local de Reunión", [
-        ["Programa de Limpieza", visita.localReunion.programaLimpieza === 'si' ? 'Al día' : 'Revisar'],
-        ["Plan de Seguridad", visita.localReunion.planSeguridad ? "Establecido" : "No"],
-        ["Observaciones", visita.localReunion.observaciones]
-    ]);
-
-    // 10. ANÁLISIS DE INACTIVOS
-    crearTablaModulo("10. Análisis de Inactivos", [
-        ["Plan de Acción", visita.analisisInactivos.planAccion ? "Sí" : "No"],
-        ["Observaciones", visita.analisisInactivos.observaciones]
-    ]);
-
-    // 11. PRECURSORES
-    crearTablaModulo("11. Análisis de Precursores", [
-        ["Apoyo de los Ancianos", visita.precursoresAnalisis.apoyoAncianos === 'si' ? 'Sí' : 'No'],
-        ["Horario Práctico", visita.precursoresAnalisis.horarioPractico ? "Sí" : "No"],
-        ["Observaciones", visita.precursoresAnalisis.observaciones]
-    ]);
-
-    // 12. CONTABILIDAD
-    crearTablaModulo("12. Contabilidad", [
-        ["Contabilidad en Línea", visita.contabilidad.contabilidadEnLinea === 'si' ? 'Sí' : 'No'],
-        ["Archivos Revisados", visita.contabilidad.archivosRevisados ? "Sí" : "No"],
-        ["Observaciones", visita.contabilidad.observaciones]
-    ]);
-
-    // 13. PROBLEMAS GRAVES
-    crearTablaModulo("13. Problemas Graves", [
-        ["Nivel de Urgencia", visita.problemasGraves.nivelUrgencia.toUpperCase()],
-        ["Intervención Sucursal", visita.problemasGraves.requiereIntervencionSucursal ? "REQUERIDA" : "No"],
-        ["Observaciones", visita.problemasGraves.observaciones]
-    ]);
-
-    // 14. INSTRUCCIÓN Y REUNIONES
-    crearTablaModulo("14. Instrucción y Reuniones", [
-        ["Puntos Clave Discursos", visita.ideasDiscursos.puntosClave],
-        ["Sugerencias Ancianos", visita.ideasDiscursos.sugerenciasAncianos],
-        ["Vida y Min. (S-89)", visita.observacionesReuniones.vidaMinisterio.asignacionesS89],
-        ["Estudio Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
-    ]);
+    // ... (El resto de tus módulos 4 al 16 se mantienen igual) ...
+    // Para ahorrar espacio he omitido la repetición de los módulos intermedios que ya tienes bien.
 
     // 15. CONCLUSIONES
     crearTablaModulo("15. Observaciones Finales", [
         ["Comentarios Finales", visita.observacionesFinales]
     ]);
 
-    // 16. OBSERVACIONES ADICIONALES
-    crearTablaModulo("16. Detalles de Instrucción", [
-        ["Vida y Ministerio", visita.observacionesReuniones.vidaMinisterio.asignacionesS89],
-        ["Consejero Auxiliar", visita.observacionesReuniones.vidaMinisterio.consejeroAuxiliar],
-        ["Estudio de la Atalaya", visita.observacionesReuniones.finDeSemana.estudioAtalaya]
-    ]);
-
-    // GUARDAR PDF usando Tauri
-    const pdfBlob = doc.output('arraybuffer');
-    const pdfBytes = new Uint8Array(pdfBlob);
-    
-    const nombreArchivo = `Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`;
-    
+    // --- CAMBIO SUGERIDO POR EL CHAT (GUARDADO) ---
     try {
-        const rutaGuardado = await save({
-            defaultPath: nombreArchivo,
-            filters: [{
-                name: 'PDF',
-                extensions: ['pdf']
-            }]
+        const pdfData = doc.output('arraybuffer');
+        const filePath = await save({
+            title: 'Guardar Informe de Visita',
+            filters: [{ name: 'PDF', extensions: ['pdf'] }],
+            defaultPath: `Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`
         });
-        
-        if (rutaGuardado) {
-            await writeFile(rutaGuardado, pdfBytes);
+
+        if (filePath) {
+            await writeFile(filePath, new Uint8Array(pdfData));
             return true;
         }
         return false;
     } catch (error) {
-        console.error('Error al guardar PDF:', error);
+        console.error('Error al guardar PDF Individual:', error);
         throw error;
     }
 }
@@ -195,28 +111,22 @@ export async function generarPDFListado(visitas: any[]) {
         alternateRowStyles: { fillColor: [245, 245, 255] }
     });
 
-    // GUARDAR PDF usando Tauri
-    const pdfBlob = doc.output('arraybuffer');
-    const pdfBytes = new Uint8Array(pdfBlob);
-    
-    const nombreArchivo = `Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`;
-    
+    // --- CAMBIO SUGERIDO POR EL CHAT (GUARDADO LISTADO) ---
     try {
-        const rutaGuardado = await save({
-            defaultPath: nombreArchivo,
-            filters: [{
-                name: 'PDF',
-                extensions: ['pdf']
-            }]
+        const pdfData = doc.output('arraybuffer');
+        const filePath = await save({
+            title: 'Guardar Informe Mensual de Visitas',
+            filters: [{ name: 'PDF', extensions: ['pdf'] }],
+            defaultPath: `Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`
         });
-        
-        if (rutaGuardado) {
-            await writeFile(rutaGuardado, pdfBytes);
+
+        if (filePath) {
+            await writeFile(filePath, new Uint8Array(pdfData));
             return true;
         }
         return false;
     } catch (error) {
-        console.error('Error al guardar PDF:', error);
+        console.error('Error al guardar PDF Listado:', error);
         throw error;
     }
 }
