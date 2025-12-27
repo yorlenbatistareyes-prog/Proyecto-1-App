@@ -3,24 +3,18 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": ["main"],
-  
   "permissions": [
     "core:default",
-    "core:window:allow-create",
-    "core:window:allow-center",
-    "core:window:allow-close",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
     "dialog:allow-ask",
     "dialog:allow-confirm",
+    "fs:default",
     "fs:allow-read-file",
     "fs:allow-write-file",
-    "fs:allow-write-text-file",
     "fs:allow-read-text-file",
-    "fs:allow-exists",
-    "fs:allow-create",
-    "fs:default"
+    "fs:allow-write-text-file"
   ]
 }
