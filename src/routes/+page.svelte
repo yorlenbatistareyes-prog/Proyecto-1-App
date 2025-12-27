@@ -15,6 +15,9 @@
   import type { Circuito, Congregacion, Visita, Vista } from '$lib/types'; 
   import { moldeVisita, eliminarVisita, procesarGuardadoVisita } from '$lib/visitas';
   
+  import { save } from '@tauri-apps/plugin-dialog';
+  import { writeTextFile } from '@tauri-apps/plugin-fs';
+
   import { Settings, Menu, User, Trash2, Pencil, Plus, Save, X, Calendar, Search, CircleCheckBig 
 } from 'lucide-svelte';
 
@@ -243,16 +246,17 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   /* LÓGICA: CONFIGURACIÓN Y BACKUP */
   async function exportarBackup() {
-    try {
-      const mensaje = await invoke('exportar_datos');
-      mostrarToast(`✅ ${mensaje}`); 
-    } catch (error) {
-      if (error !== "Cancelado por el usuario" && error !== "Exportación cancelada") {
-        console.error("Error al exportar:", error);
-        mostrarToast("❌ Error al exportar los datos", "error");
-      }
+  try {
+    const mensaje = await invoke('exportar_datos');
+    mostrarToast(`✅ ${mensaje}`); 
+  } catch (error) {
+    console.error("Error completo al exportar:", error);
+    alert("Error detallado: " + error); // Línea temporal para ver el error
+    if (error !== "Cancelado por el usuario" && error !== "Exportación cancelada") {
+      mostrarToast("❌ Error al exportar los datos", "error");
     }
   }
+}
 
   async function importarBackup() {
     try {
@@ -410,37 +414,49 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   // --- ELIMINADAS LAS LÍNEAS QUE CAUSABAN EL ERROR AQUÍ ---
 
- function exportarDatos(formato: 'csv' | 'pdf') {
-    // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
-    if (visitasFiltradas.length === 0) {
-      return alert('No hay datos registrados para exportar.');
-    }
-
-    if (formato === 'pdf') {
-      // Llamamos a la lógica externa
-      generarPDFListado(visitasFiltradas);
-    } else {
-      // El CSV es solo texto, puede quedarse aquí
-      const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
-      const filas = visitasFiltradas.map(v => [
-        v.fecha || 'N/A', 
-        v.congregacionId || 'N/A', 
-        v.tipo || 'N/A', 
-        v.observacionesFinales || ''
-      ]);
-      let contenido = encabezados.join(';') + '\n';
-      filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + contenido], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Informe_Visitas.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
+ async function exportarDatos(formato: 'csv' | 'pdf') {
+  // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
+  if (visitasFiltradas.length === 0) {
+    return alert('No hay datos registrados para exportar.');
   }
 
+  if (formato === 'pdf') {
+    // Llamamos a la lógica externa
+    await generarPDFListado(visitasFiltradas);
+  } else {
+    // CSV usando Tauri
+    const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
+    const filas = visitasFiltradas.map(v => [
+      v.fecha || 'N/A', 
+      v.congregacionId || 'N/A', 
+      v.tipo || 'N/A', 
+      v.observacionesFinales || ''
+    ]);
+    
+    let contenido = encabezados.join(';') + '\n';
+    filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
+    const BOM = '\uFEFF';
+    const contenidoFinal = BOM + contenido;
+    
+    try {
+      const rutaGuardado = await save({
+        defaultPath: 'Informe_Visitas.csv',
+        filters: [{
+          name: 'CSV',
+          extensions: ['csv']
+        }]
+      });
+      
+      if (rutaGuardado) {
+        await writeTextFile(rutaGuardado, contenidoFinal);
+        mostrarToast('✅ CSV exportado correctamente');
+      }
+    } catch (error) {
+      console.error('Error al exportar CSV:', error);
+      mostrarToast('❌ Error al exportar CSV', 'error');
+    }
+  }
+}
   // --- FUNCIONES DE GESTIÓN DE VISITAS ---
   function cargarVisitaParaVer(visita: any) {
     // Rellenamos el formulario con los datos guardados
