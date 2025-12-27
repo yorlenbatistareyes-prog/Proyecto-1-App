@@ -243,16 +243,17 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 
   /* LÓGICA: CONFIGURACIÓN Y BACKUP */
   async function exportarBackup() {
-    try {
-      const mensaje = await invoke('exportar_datos');
-      mostrarToast(`✅ ${mensaje}`); 
-    } catch (error) {
-      if (error !== "Cancelado por el usuario" && error !== "Exportación cancelada") {
-        console.error("Error al exportar:", error);
-        mostrarToast("❌ Error al exportar los datos", "error");
-      }
+  try {
+    const mensaje = await invoke('exportar_datos');
+    mostrarToast(`✅ ${mensaje}`); 
+  } catch (error) {
+    console.error("Error completo al exportar:", error);
+    alert("Error detallado: " + error); // Línea temporal para ver el error
+    if (error !== "Cancelado por el usuario" && error !== "Exportación cancelada") {
+      mostrarToast("❌ Error al exportar los datos", "error");
     }
   }
+}
 
   async function importarBackup() {
     try {
