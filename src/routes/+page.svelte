@@ -454,7 +454,7 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
     }).reverse()
   );
 
-// --- COPIA Y PEGA ESTA VERSIÓN FIEL A LA SUGERENCIA ---
+// --- COPIA Y PEGA ESTA VERSIÓN FIEL A LA SUGERENCIA 
 
 async function exportarDatos(formato: 'csv' | 'pdf') {
   // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
