@@ -24,7 +24,8 @@
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
-      }
+      },
+      "capabilities": ["default"]
     },
     "withGlobalTauri": true
   },
@@ -39,8 +40,6 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "dialog": {},
-    "fs": {}
-  }
+ "plugins": {}
+
 }
