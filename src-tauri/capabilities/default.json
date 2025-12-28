@@ -1,20 +1,22 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
+  "description": "Permisos básicos para mi app",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
-    "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-message",
-    "dialog:allow-ask",
-    "dialog:allow-confirm",
-    "fs:default",
-    "fs:allow-read-file",
     "fs:allow-write-file",
-    "fs:allow-read-text-file",
-    "fs:allow-write-text-file"
+    "fs:allow-read-file",
+    "fs:allow-exists",
+    {
+      "identifier": "fs:allow-desktop-write",
+      "allow": [{ "path": "$DESKTOP/*" }]
+    },
+    {
+      "identifier": "fs:allow-download-write",
+      "allow": [{ "path": "$DOWNLOAD/*" }]
+    }
   ]
 }
