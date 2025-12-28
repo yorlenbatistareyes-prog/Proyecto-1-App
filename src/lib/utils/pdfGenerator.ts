@@ -3,6 +3,34 @@ import autoTable from 'jspdf-autotable';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
+/**
+ * FUNCIÓN DE GUARDADO NATIVO
+ * Centraliza la lógica de Tauri v2 para evitar errores en el .exe
+ */
+async function procesarGuardadoTauri(doc: jsPDF, nombreSugerido: string) {
+    try {
+        const pdfOutput = doc.output('arraybuffer');
+        const filePath = await save({
+            title: 'Seleccionar ubicación para guardar el informe',
+            filters: [{ name: 'PDF', extensions: ['pdf'] }],
+            defaultPath: nombreSugerido
+        });
+
+        if (filePath) {
+            // Es vital usar Uint8Array para que Rust reciba los datos correctamente
+            await writeFile(filePath, new Uint8Array(pdfOutput));
+            return { success: true, path: filePath };
+        }
+        return { success: false, reason: 'Operación cancelada' };
+    } catch (error) {
+        console.error("Error al guardar PDF en Tauri:", error);
+        throw error;
+    }
+}
+
+/**
+ * GENERA EL PDF DETALLADO DE UNA VISITA (CON LOS 15 MÓDULOS)
+ */
 export async function generarPDFIndividual(visita: any) {
     const doc = new jsPDF();
     let y = 20;
@@ -19,6 +47,7 @@ export async function generarPDFIndividual(visita: any) {
     doc.setTextColor(0, 0, 0);
     y = 40;
 
+    // Función interna para dibujar tablas de módulos
     const crearTablaModulo = (titulo: string, filas: any[][]) => {
         autoTable(doc, {
             startY: y,
@@ -34,6 +63,7 @@ export async function generarPDFIndividual(visita: any) {
         if (y > 260) { doc.addPage(); y = 20; }
     };
 
+    
     // 1. MINISTERIO
     crearTablaModulo("1. Ministerio del Campo", [
         ["Observaciones Territorio", visita.ministerio.territorioObs],
@@ -65,26 +95,14 @@ export async function generarPDFIndividual(visita: any) {
         ["Comentarios Finales", visita.observacionesFinales]
     ]);
 
-    // --- CAMBIO SUGERIDO POR EL CHAT (GUARDADO) ---
-    try {
-        const pdfData = doc.output('arraybuffer');
-        const filePath = await save({
-            title: 'Guardar Informe de Visita',
-            filters: [{ name: 'PDF', extensions: ['pdf'] }],
-            defaultPath: `Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`
-        });
-
-        if (filePath) {
-            await writeFile(filePath, new Uint8Array(pdfData));
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error('Error al guardar PDF Individual:', error);
-        throw error;
-    }
+    // --- GUARDADO FINAL ---
+    const nombreDoc = `Informe_Visita_${visita.congregacionId}_${visita.fecha}.pdf`;
+    return await procesarGuardadoTauri(doc, nombreDoc);
 }
 
+/**
+ * GENERA EL PDF RESUMEN DE TODAS LAS VISITAS (TABLA GENERAL)
+ */
 export async function generarPDFListado(visitas: any[]) {
     const doc = new jsPDF();
     const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
@@ -111,22 +129,7 @@ export async function generarPDFListado(visitas: any[]) {
         alternateRowStyles: { fillColor: [245, 245, 255] }
     });
 
-    // --- CAMBIO SUGERIDO POR EL CHAT (GUARDADO LISTADO) ---
-    try {
-        const pdfData = doc.output('arraybuffer');
-        const filePath = await save({
-            title: 'Guardar Informe Mensual de Visitas',
-            filters: [{ name: 'PDF', extensions: ['pdf'] }],
-            defaultPath: `Informe_Visitas_${new Date().toISOString().slice(0, 10)}.pdf`
-        });
-
-        if (filePath) {
-            await writeFile(filePath, new Uint8Array(pdfData));
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error('Error al guardar PDF Listado:', error);
-        throw error;
-    }
+    // --- GUARDADO FINAL ---
+    const fechaActual = new Date().toISOString().slice(0, 10);
+    return await procesarGuardadoTauri(doc, `Listado_Visitas_${fechaActual}.pdf`);
 }

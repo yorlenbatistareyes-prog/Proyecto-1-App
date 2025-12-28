@@ -376,41 +376,48 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
   let nuevaVisita = $state({ ...moldeVisita });
 
   async function guardarVisita() {
+    // 1. Validación inicial
     if (!nuevaVisita.congregacionId || !nuevaVisita.fecha) {
-      alert("Por favor, seleccione la congregación y la fecha.");
-      return;
+        alert("Por favor, seleccione la congregación y la fecha.");
+        return;
     }
 
-    // 1. Procesamos el guardado
-    const esNueva = procesarGuardadoVisita(nuevaVisita);
-
-    // --- NUEVO: Generar el PDF Automáticamente ---
     try {
-      await generarPDFIndividual(nuevaVisita);
+        // 2. Procesamos el guardado en la base de datos local
+        // Guardamos 'esNueva' antes de limpiar el formulario
+        const esNueva = procesarGuardadoVisita(nuevaVisita);
+
+        // 3. Generar el PDF Automáticamente (Llamada nativa a Tauri)
+        // Intentamos generar el PDF. Si el usuario cancela la ventana de guardado,
+        // el catch capturará el error o simplemente no hará nada según tu pdfGenerator.
+        await generarPDFIndividual(nuevaVisita); 
+
+        // 4. Lógica de Tareas automáticas si hay observaciones
+        if (esNueva && nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
+            const nuevoPendiente = {
+                id: Date.now() + 1,
+                texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`,
+                completada: false,
+                fechaVencimiento: null 
+            };
+            
+            tareas = [...tareas, nuevoPendiente];
+            console.log("✅ Tarea creada con éxito");
+        }
+
+        // 5. ÉXITO TOTAL: Un solo mensaje claro
+        mostrarToast('✅ Registro guardado e Informe PDF generado');
+
     } catch (error) {
-      console.error("Error al generar PDF automático:", error);
-      // No bloqueamos el proceso, solo avisamos en consola
+        // Si algo falla en el proceso (especialmente el PDF)
+        console.error("Error en el proceso de guardado:", error);
+        mostrarToast('⚠️ Registro guardado, pero hubo un problema con el PDF', 'error');
+    } finally {
+        // 6. Limpieza y Cierre (Se ejecuta siempre para no dejar el formulario abierto)
+        creandoVisita = false; 
+        nuevaVisita = { ...moldeVisita }; 
     }
-    // ----------------------------------------------
-
-    // 2. Lógica de Tareas
-    if (esNueva && nuevaVisita.observacionesFinales && nuevaVisita.observacionesFinales.trim() !== '') {
-        const nuevoPendiente = {
-            id: Date.now() + 1,
-            texto: `Pendiente de ${nuevaVisita.congregacionId}: ${nuevaVisita.observacionesFinales}`,
-            completada: false,
-            fechaVencimiento: null 
-        };
-        
-        tareas = [...tareas, nuevoPendiente];
-        console.log("✅ Tarea creada con éxito");
-    }
-
-    // 3. Limpieza y Cierre
-    mostrarToast('✅ Registro guardado e Informe PDF generado');
-    creandoVisita = false; 
-    nuevaVisita = { ...moldeVisita }; 
-  }
+}
 
   function toggleDiaMinisterio(dia: string) {
     const programa = nuevaVisita.ministerio.programa;
@@ -457,48 +464,52 @@ let totalPendientes = $derived(tareas.filter(t => !t.completada).length);
 // --- COPIA Y PEGA ESTA VERSIÓN FIEL A LA SUGERENCIA 
 
 async function exportarDatos(formato: 'csv' | 'pdf') {
-  // Usamos las visitas filtradas para que el PDF coincida con lo que ves en pantalla
   if (visitasFiltradas.length === 0) {
     return alert('No hay datos registrados para exportar.');
   }
 
+  // --- CASO PDF ---
   if (formato === 'pdf') {
-    // CAMBIO FIEL: Se añade 'await' para la lógica externa
-    await generarPDFListado(visitasFiltradas);
-  } else {
-    // El CSV es solo texto, se queda aquí con la lógica de Tauri que ya tienes
-    const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
-    const filas = visitasFiltradas.map(v => [
-      v.fecha || 'N/A', 
-      v.congregacionId || 'N/A', 
-      v.tipo || 'N/A', 
-      v.observacionesFinales || ''
-    ]);
-    
-    let contenido = encabezados.join(';') + '\n';
-    filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
-    const BOM = '\uFEFF';
-    const contenidoFinal = BOM + contenido;
-    
     try {
-      const rutaGuardado = await save({
-        title: 'Guardar Informe CSV',
-        defaultPath: 'Informe_Visitas.csv',
-        filters: [{
-          name: 'CSV',
-          extensions: ['csv']
-        }]
-      });
-      
-      if (rutaGuardado) {
-        await writeTextFile(rutaGuardado, contenidoFinal);
-        mostrarToast('✅ CSV exportado correctamente');
-      }
+      // No necesitas mapear filas aquí, ya lo hace la función interna
+      await generarPDFListado(visitasFiltradas);
+      mostrarToast('✅ Listado PDF exportado');
     } catch (error) {
-      console.error('Error detallado:', error);
-      alert(`Error de sistema: ${error}`); 
-      mostrarToast('❌ Error al exportar CSV', 'error');
+      console.error('Error PDF:', error);
+      mostrarToast('❌ Error al exportar PDF', 'error');
     }
+    return; // Salimos de la función
+  }
+
+  // --- CASO CSV (Se mantiene aquí porque es lógica simple de texto) ---
+  const encabezados = ['Fecha', 'Congregación', 'Tipo', 'Observaciones Finales'];
+  const filas = visitasFiltradas.map(v => [
+    v.fecha || 'N/A', 
+    v.congregacionId || 'N/A', 
+    v.tipo || 'N/A', 
+    v.observacionesFinales || ''
+  ]);
+  
+  let contenido = encabezados.join(';') + '\n';
+  filas.forEach(f => contenido += f.map(c => `"${c}"`).join(';') + '\n');
+  
+  const BOM = '\uFEFF'; // Para que Excel reconozca tildes y eñes
+  const contenidoFinal = BOM + contenido;
+  
+  try {
+    const rutaGuardado = await save({
+      title: 'Guardar Informe CSV',
+      defaultPath: `Informe_Visitas_${new Date().toISOString().slice(0,10)}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    });
+    
+    if (rutaGuardado) {
+      await writeTextFile(rutaGuardado, contenidoFinal);
+      mostrarToast('✅ CSV exportado correctamente');
+    }
+  } catch (error) {
+    console.error('Error CSV:', error);
+    mostrarToast('❌ Error al exportar CSV', 'error');
   }
 }
   // --- FUNCIONES DE GESTIÓN DE VISITAS ---
