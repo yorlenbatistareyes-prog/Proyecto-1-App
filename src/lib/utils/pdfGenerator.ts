@@ -9,7 +9,9 @@ import { writeFile } from '@tauri-apps/plugin-fs';
  */
 async function procesarGuardadoTauri(doc: jsPDF, nombreSugerido: string) {
     try {
-        const pdfOutput = doc.output('arraybuffer');
+        const blob = doc.output('blob');
+        const arrayBuffer = await blob.arrayBuffer();
+
         const filePath = await save({
             title: 'Seleccionar ubicación para guardar el informe',
             filters: [{ name: 'PDF', extensions: ['pdf'] }],
@@ -17,17 +19,18 @@ async function procesarGuardadoTauri(doc: jsPDF, nombreSugerido: string) {
         });
 
         if (filePath) {
-            // Es vital usar Uint8Array para que Rust reciba los datos correctamente
-            await writeFile(filePath, new Uint8Array(pdfOutput));
+            // Guardado correcto en Tauri v2
+            await writeFile(filePath, new Uint8Array(arrayBuffer));
             return { success: true, path: filePath };
         }
+
         return { success: false, reason: 'Operación cancelada' };
+
     } catch (error) {
         console.error("Error al guardar PDF en Tauri:", error);
         throw error;
     }
 }
-
 /**
  * GENERA EL PDF DETALLADO DE UNA VISITA (CON LOS 15 MÓDULOS)
  */

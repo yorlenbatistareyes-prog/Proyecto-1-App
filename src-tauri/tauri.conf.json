@@ -40,6 +40,9 @@
       "icons/icon.ico"
     ]
   },
- "plugins": {}
-
+  "plugins": {
+  "fs": null,
+  "dialog": null
+  }
 }
+

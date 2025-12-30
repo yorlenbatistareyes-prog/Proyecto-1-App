@@ -5,14 +5,15 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		// Este adaptador es el que genera la carpeta 'dist'
 		adapter: adapter({
+			strict: false,
 			pages: 'dist',
 			assets: 'dist',
-			fallback: 'index.html', // Necesario para que las rutas funcionen en el .exe
-			precompress: false,
-			strict: true
-		})
+			fallback: 'index.html'
+		}),
+		paths: {
+			base: ''
+		}
 	}
 };
 
