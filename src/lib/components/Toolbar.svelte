@@ -1,8 +1,16 @@
 <script>
   import { Globe, Search, LayoutGrid } from 'lucide-svelte';
-  
+  import { createEventDispatcher } from 'svelte'; // Importamos el despachador de eventos
+
+  const dispatch = createEventDispatcher();
+
   export let nombreCircuito = "Holguín-14";
   export let cantidadCongregaciones = 2;
+
+  // Función para enviar el evento al padre (+page.svelte)
+  function manejarGestionar() {
+    dispatch('abrirGestionar');
+  }
 </script>
 
 <div class="toolbar-wrapper">
@@ -27,7 +35,7 @@
         <span class="text">Congregaciones</span>
       </div>
       
-      <button class="btn-manage">
+      <button class="btn-manage" on:click={manejarGestionar}>
         <LayoutGrid size={18} strokeWidth={2.5} />
         <span>Gestionar Circuitos</span>
       </button>
@@ -40,7 +48,7 @@
     --brand-red: #b91c1c;
     --brand-red-light: rgba(185, 28, 28, 0.1);
     --brand-red-soft: rgba(185, 28, 28, 0.05);
-    --border-strong: #cbd5e1; /* Gris más oscuro para visibilidad */
+    --border-strong: #cbd5e1;
     --text-main: #1e293b;
   }
 
@@ -60,7 +68,6 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
   }
 
-  /* --- Estilo Circuito --- */
   .circuit-info {
     display: flex;
     align-items: center;
@@ -75,12 +82,11 @@
 
   .icon-wrapper { color: var(--brand-red); display: flex; }
 
-  /* --- Estilo Buscador --- */
   .search-section { 
     flex-grow: 1; 
     padding: 0 20px; 
     display: flex;
-    justify-content: center; /* Mantiene el buscador equilibrado */
+    justify-content: center;
   }
 
   .search-container { 
@@ -114,11 +120,10 @@
     border-color: var(--brand-red);
   }
 
-  /* --- Acciones Separadas --- */
   .actions {
     display: flex;
     align-items: center;
-    gap: 15px; /* Espacio entre el badge y el botón */
+    gap: 15px;
   }
 
   .cong-badge {
@@ -128,7 +133,7 @@
     background: var(--brand-red-soft);
     padding: 6px 14px;
     border-radius: 10px;
-    border: 1.5px solid var(--brand-red-light); /* Borde rojizo sutil */
+    border: 1.5px solid var(--brand-red-light);
     white-space: nowrap;
   }
 
