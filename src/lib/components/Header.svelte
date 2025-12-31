@@ -1,129 +1,93 @@
-<script lang="ts">
-  import { menuAbierto, vistaActual } from '$lib/stores';
-  // Importación de los iconos
-  import { Menu, Settings } from 'lucide-svelte';
-
-  // Manejador de eventos
-  function handleMenuClick(e: Event) {
-    e.stopPropagation();
-    // En Svelte 5 los stores se siguen usando con $
-    $menuAbierto = true;
-  }
+<script>
+  import { Settings, Menu } from 'lucide-svelte';
 </script>
 
-<header class="header">
-  <div class="header-top">
-    <button class="menu-toggle" onclick={handleMenuClick} aria-label="Abrir menú">
-      <Menu size={28} strokeWidth={2} />
-    </button>
-
-    <div class="header-logo">
-      <div class="logo-text">AV</div>
+<div class="header-full">
+  <div class="top-white-bar">
+    <div class="logo-section">
+      <div class="logo-red-floating">AV</div>
+      
+      <div class="spacer"></div>
+      
+      <button class="menu-btn"><Menu size={20} /></button>
+      <div class="titles">
+        <h1>Asistente de Visitas</h1>
+        <p>Documenta todas tus visitas</p>
+      </div>
     </div>
-
-    <div class="header-info">
-      <h1>Asistente de Visitas</h1>
-      <p>Documenta todas tus visitas</p>
-    </div>
-
-    <div class="spacer"></div>
-
-    <button class="config-button" onclick={() => ($vistaActual = 'configuracion')} aria-label="Configuración">
-      <Settings size={24} color="#666" strokeWidth={1.5} />
-    </button>
+    <button class="settings-btn"><Settings size={20} /></button>
   </div>
 
-  <div class="barra-oscura-inferior"></div>
-</header>
+  <div class="bottom-dark-bar"></div>
+</div>
 
 <style>
-  .header { 
-    width: 100%; 
-    position: relative; 
+  .header-full {
     display: flex;
     flex-direction: column;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  }
-
-  .header-top { 
-    display: flex; 
-    align-items: center; 
-    background: #ffffff; 
-    height: 72px; 
-    padding: 0 20px 0 160px; 
-    box-sizing: border-box;
     width: 100%;
     position: relative;
   }
 
-  .barra-oscura-inferior {
-    background-color: #333333;
-    height: 48px;
-    width: 100%;
+  .top-white-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: white;
+    height: 65px;
   }
 
-  .header-logo { 
-    position: absolute; 
-    left: 0; 
-    top: 0; 
-    width: 90px; 
-    height: 96px; 
-    background: #b63a3a; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 10; 
+  .logo-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
   }
 
-  .logo-text { 
-    color: white; 
-    font-size: 46px; 
-    font-weight: bold; 
-  }
-
-  .header-info h1 {
-    margin: 0;
-    font-size: 1.3rem;
-    color: #333;
-    font-weight: bold;
-  }
-
-  .header-info p {
-    margin: 0;
-    font-size: 0.85rem;
-    color: #666;
-  }
-
-  .menu-toggle, .config-button {
+  .logo-red-floating {
+    background: #b91c1c;
+    color: white;
+    width: 65px;
+    height: 85px; /* Controla cuánto baja sobre lo gris */
     display: flex;
     align-items: center;
     justify-content: center;
+    font-weight: bold;
+    font-size: 1.8rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .spacer {
+    width: 65px;
+  }
+
+  .menu-btn, .settings-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px;
-    transition: opacity 0.2s;
+    color: #334155;
   }
 
-  .menu-toggle:hover, .config-button:hover {
-    opacity: 0.7;
+  .titles h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    color: #1e293b;
+    font-weight: bold;
   }
 
-  .menu-toggle { 
-    position: absolute; 
-    left: 105px; 
-    top: 22px; 
-    z-index: 20; 
+  .titles p {
+    font-size: 0.8rem;
+    margin: 0;
+    color: #64748b;
   }
 
-  .spacer { flex: 1; }
-
-  @media (max-width: 600px) {
-    .header-top { padding: 0 10px 0 115px; }
-    .header-logo { width: 75px; }
-    .logo-text { font-size: 35px; }
-    .menu-toggle { left: 82px; top: 24px; }
-    .header-info h1 { font-size: 1rem; }
-    .header-info p { font-size: 0.7rem; white-space: nowrap; }
+  .bottom-dark-bar {
+    background: #333;
+    height: 45px;
+    width: 100%;
   }
 </style>
