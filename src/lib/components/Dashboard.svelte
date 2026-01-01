@@ -308,8 +308,10 @@
   .field input:focus, .field select:focus { outline: none; border-bottom: 2px solid #b91c1c; }
 
   .select-wrapper { position: relative; width: 100%; }
+  .select-icon { position: absolute; right: 0; bottom: 10px; color: #94a3b8; pointer-events: none; }
 
   .input-with-icon.left input { padding-left: 25px !important; }
+  .input-icon-left { position: absolute; left: 0; bottom: 10px; color: #64748b; }
 
   .checkbox-container { flex-direction: row; align-items: center; gap: 8px; padding-top: 22px; }
   .cb-label { margin: 0 !important; color: #334155 !important; font-size: 0.85rem; }
