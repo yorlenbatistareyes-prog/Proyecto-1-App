@@ -121,125 +121,145 @@
 </div>
 
 {#if showModal}
-  <div class="modal-overlay" on:click|self={cerrarModal}>
-    <div class="modal-content">
+  <div 
+    class="modal-overlay" 
+    on:click|self={cerrarModal} 
+    on:keydown={(e) => e.key === 'Escape' && cerrarModal()}
+    role="button"
+    tabindex="-1"
+  >
+    <div class="modal-content" role="dialog" aria-modal="true">
       <div class="modal-header">
         <h3>Nueva Congregación</h3>
-        <button class="btn-close-x" on:click={cerrarModal}><X size={20}/></button>
+        <button type="button" class="btn-close-x" on:click={cerrarModal} aria-label="Cerrar">
+          <X size={20}/>
+        </button>
       </div>
       
       <div class="modal-body">
         <div class="form-row circuit-header">
           <div class="field flex-2">
             <div class="input-with-icon left">
-                <Network size={16} class="input-icon-left"/>
-                <input type="text" bind:value={nuevaCong.circuito} placeholder="Seleccione el circuito" />
+              <Network size={16} class="input-icon-left"/>
+              <input 
+                type="text" 
+                bind:value={nuevaCong.circuito} 
+                placeholder="Seleccione el circuito" 
+                aria-label="Circuito"
+              />
             </div>
           </div>
           <div class="field flex-1">
             <div class="select-wrapper">
-                <select bind:value={nuevaCong.seccion}>
-                    <option value="" disabled selected>Sección</option>
-                    {#each secciones as letra}<option value={letra}>{letra}</option>{/each}
-                </select>
-                <ChevronDown size={14} class="select-icon" />
+              <select bind:value={nuevaCong.seccion} aria-label="Sección">
+                <option value="" disabled selected>Sección</option>
+                {#each secciones as letra}
+                  <option value={letra}>{letra}</option>
+                {/each}
+              </select>
+              <ChevronDown size={14} class="select-icon" />
             </div>
           </div>
           <div class="field flex-2">
-            <input type="text" bind:value={nuevaCong.sucursal} placeholder="Sucursal" />
+            <input 
+              type="text" 
+              bind:value={nuevaCong.sucursal} 
+              placeholder="Sucursal" 
+              aria-label="Sucursal"
+            />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field flex-3">
-            <label>Nombre de Congregación *</label>
-            <input type="text" bind:value={nuevaCong.nombre} placeholder="Nombre" />
+            <label for="nombre-cong">Nombre de Congregación *</label>
+            <input id="nombre-cong" type="text" bind:value={nuevaCong.nombre} placeholder="Nombre" />
           </div>
           <div class="field flex-2">
-            <label>Número</label>
-            <input type="text" bind:value={nuevaCong.numero} />
+            <label for="num-cong">Número</label>
+            <input id="num-cong" type="text" bind:value={nuevaCong.numero} />
           </div>
           <div class="field flex-2">
-            <label>Ciudad *</label>
-            <input type="text" bind:value={nuevaCong.ciudad} />
+            <label for="ciudad-cong">Ciudad *</label>
+            <input id="ciudad-cong" type="text" bind:value={nuevaCong.ciudad} />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field flex-2">
-            <label>País</label>
+            <label for="pais-cong">País</label>
             <div class="select-wrapper">
-                <select bind:value={nuevaCong.pais}>
-                    {#each paises as p}<option value={p}>{p}</option>{/each}
-                </select>
-                <ChevronDown size={14} class="select-icon" />
+              <select id="pais-cong" bind:value={nuevaCong.pais}>
+                {#each paises as p}<option value={p}>{p}</option>{/each}
+              </select>
+              <ChevronDown size={14} class="select-icon" />
             </div>
           </div>
           <div class="field flex-2">
-            <label>Idioma</label>
+            <label for="idioma-cong">Idioma</label>
             <div class="select-wrapper">
-                <select bind:value={nuevaCong.idioma}>
-                    {#each idiomas as i}<option value={i}>{i}</option>{/each}
-                </select>
-                <ChevronDown size={14} class="select-icon" />
+              <select id="idioma-cong" bind:value={nuevaCong.idioma}>
+                {#each idiomas as i}<option value={i}>{i}</option>{/each}
+              </select>
+              <ChevronDown size={14} class="select-icon" />
             </div>
           </div>
           <div class="field flex-2 checkbox-container">
-            <input type="checkbox" id="l-senas" bind:checked={nuevaCong.esLenguaSenas} />
+            <input type="checkbox" id="l-senas" bind:checked={nuevaCong.esLenguaSeñas} />
             <label for="l-senas" class="cb-label">Lengua de señas</label>
           </div>
           <div class="field flex-3">
-            <label>Teléfono Principal</label>
-            <input type="text" bind:value={nuevaCong.telefono} />
+            <label for="tel-cong">Teléfono Principal</label>
+            <input id="tel-cong" type="text" bind:value={nuevaCong.telefono} />
           </div>
         </div>
 
         <div class="reunion-container">
-            <div class="reunion-box">
-                <label class="reunion-label">Reunión entre semana</label>
-                <div class="reunion-row">
-                    <div class="field flex-2">
-                        <div class="select-wrapper">
-                            <select bind:value={nuevaCong.diaEntreSemana}>
-                                {#each diasEntreSemana as d}<option value={d}>{d}</option>{/each}
-                            </select>
-                            <ChevronDown size={14} class="select-icon" />
-                        </div>
-                    </div>
-                    <div class="field flex-1">
-                        <div class="time-input-box">
-                            <Clock size={16} color="#94a3b8" />
-                            <input type="time" bind:value={nuevaCong.reunionEntreSemana} />
-                        </div>
-                    </div>
+          <div class="reunion-box">
+            <label for="dia-semana" class="reunion-label">Reunión entre semana</label>
+            <div class="reunion-row">
+              <div class="field flex-2">
+                <div class="select-wrapper">
+                  <select id="dia-semana" bind:value={nuevaCong.reunionEntreSemana}>
+                    {#each diasEntreSemana as d}<option value={d}>{d}</option>{/each}
+                  </select>
+                  <ChevronDown size={14} class="select-icon" />
                 </div>
+              </div>
+              <div class="field flex-1">
+                <div class="time-input-box">
+                  <Clock size={16} color="#94a3b8" />
+                  <input type="time" bind:value={nuevaCong.horaEntreSemana} aria-label="Hora entre semana" />
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div class="reunion-box">
-                <label class="reunion-label">Reunión fin de semana</label>
-                <div class="reunion-row">
-                    <div class="field flex-2">
-                        <div class="select-wrapper">
-                            <select bind:value={nuevaCong.diaFinSemana}>
-                                {#each diasFinSemana as d}<option value={d}>{d}</option>{/each}
-                            </select>
-                            <ChevronDown size={14} class="select-icon" />
-                        </div>
-                    </div>
-                    <div class="field flex-1">
-                        <div class="time-input-box">
-                            <Clock size={16} color="#94a3b8" />
-                            <input type="time" bind:value={nuevaCong.reunionFinSemana} />
-                        </div>
-                    </div>
+          <div class="reunion-box">
+            <label for="dia-fin" class="reunion-label">Reunión fin de semana</label>
+            <div class="reunion-row">
+              <div class="field flex-2">
+                <div class="select-wrapper">
+                  <select id="dia-fin" bind:value={nuevaCong.reunionFinSemana}>
+                    {#each diasFinSemana as d}<option value={d}>{d}</option>{/each}
+                  </select>
+                  <ChevronDown size={14} class="select-icon" />
                 </div>
+              </div>
+              <div class="field flex-1">
+                <div class="time-input-box">
+                  <Clock size={16} color="#94a3b8" />
+                  <input type="time" bind:value={nuevaCong.horaFinSemana} aria-label="Hora fin de semana" />
+                </div>
+              </div>
             </div>
+          </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="btn-cancel" on:click={cerrarModal}>Cancelar</button>
-        <button class="btn-save" on:click={guardarCongregacion}>Crear Congregación</button>
+        <button type="button" class="btn-cancel" on:click={cerrarModal}>Cancelar</button>
+        <button type="button" class="btn-save" on:click={guardarCongregacion}>Crear Congregación</button>
       </div>
     </div>
   </div>
@@ -288,10 +308,8 @@
   .field input:focus, .field select:focus { outline: none; border-bottom: 2px solid #b91c1c; }
 
   .select-wrapper { position: relative; width: 100%; }
-  .select-icon { position: absolute; right: 0; bottom: 10px; color: #94a3b8; pointer-events: none; }
 
   .input-with-icon.left input { padding-left: 25px !important; }
-  .input-icon-left { position: absolute; left: 0; bottom: 10px; color: #64748b; }
 
   .checkbox-container { flex-direction: row; align-items: center; gap: 8px; padding-top: 22px; }
   .cb-label { margin: 0 !important; color: #334155 !important; font-size: 0.85rem; }
